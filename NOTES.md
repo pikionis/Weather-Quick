@@ -18,6 +18,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - "Past weeks" means 28 days and "coming days" means 7. Both are a single parameter.
 - Daily values are computed in local time (Europe/Athens). The response uses one fixed `utc_offset_seconds` for the whole range, so hours around a daylight-saving change need a check.
 - **Two sources for the past, on purpose.** The base shows `past_days` from the Forecast API: one call, no gap in recent days, but model data. The backtest uses ERA5 (Historical Weather API) as "what actually happened": the same truth for every day, but it lags by a few days, so the most recent days stay out of the backtest. ERA5 is a reanalysis, not a station reading.
+- **Limit of the truth.** The ERA5 cell (37.0 N, 27.25 E) is mostly sea and the coast of the Bodrum (Halicarnassus) peninsula, with Kos town at its edge. The correction brings us closer to ERA5, not to a station in Kos.
 - Units stay at the API defaults (°C, km/h, mm) and every value in the UI shows its unit.
 - The place comes from the Geocoding API. A search for "Kos" without a country returns Kūstī (Sudan) and Košice (Slovakia) first; with `countryCode=GR` the first result is Kos town (36.893 N, 27.288 E, population 19,244). Default: Kos town.
 
@@ -27,6 +28,10 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Runner score (the "verdict")** as the extension. Chosen instead: the second opinion. It moves to the roadmap.
 - **Laravel with an AI SDK**, after a 2020 Laravel News article on `vemcogroup/laravel-weather`. Chosen instead: stay on the static Vite site. Why: that package wraps Dark Sky and weatherstack, which are keyed providers, and Dark Sky no longer accepts sign-ups. Open-Meteo needs no backend. A PHP host plus an LLM key would cost 2 to 3 of the remaining ~4:50 hours. An AI-written explanation could come later as a serverless function.
 - **Dropping `hourly` from the base Forecast call** (proposed by the AI before step 4: 44 KB to 2.6 KB, request weight 5.5 to 3.75). Chosen instead: keep it. Why: the contract is already merged, and the change would touch the brief, the type, the fixture and the tests for no visible gain. If nothing uses `hourly` after step 6, it goes then.
+- **Decision rule without a margin** (the first draft of `docs/architecture.md`: the correction wins whenever its MAE is lower). Chosen instead: it wins only if it is at least 0.1 °C better. Why: otherwise the badge can say "0.0 °C better".
+- **80% band from the corrected errors only** (same draft). Chosen instead: from the errors of the line we show, the source's when the source wins. Why: the band has to describe the line on screen.
+- **Rain bars inside the temperature chart, without an axis** (the mockup in `docs/ui-design.md`). Chosen instead: a rain chart of its own under the temperature, with a mm axis and the same dates. Why: every value shows its unit.
+- **Space Grotesk and Inter** (the mockup). Chosen instead: system fonts. Why: nothing to load and no third-party request.
 
 ## What real responses taught us (2026-11-25)
 
@@ -39,8 +44,10 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 ## What real responses taught us (2026-11-26)
 
 - **Requests have a weight.** The `X-RateLimit-Cost` header counts days and variables: the full Forecast request is 5.5 calls, a 7-day refresh 2.2. So the refresh leaves the history out.
-- **The archive default is not ERA5.** Without `models`, 336 of 336 hours (12 to 25 November) equal `ecmwf_ifs`, on its cell (36.872 N, 27.237 E), with no gap up to yesterday. With `models=era5` the cell is 37.0 N, 27.25 E, the last full day was 19 November, and the hours differ by 0.68 °C on average. `kos-era5.json` has the `ecmwf_ifs` cell, so the "ERA5" cell in the list above is really the default's. Open: `docs/architecture.md` section 6, before step 5.
-- **About 35 days of history cannot feed the backtest.** With a 21-day bias window and the real ERA5 lag they leave 1 backtest day at lead 1 and none after it, under our own n ≥ 10 rule. 90 days leave 50 to 56. Open: same place.
+- **The archive default is not ERA5.** Without `models`, 336 of 336 hours (12 to 25 November) equal `ecmwf_ifs`, on its cell (36.872 N, 27.237 E), with no gap up to yesterday. With `models=era5` the cell is 37.0 N, 27.25 E, the last full day was 19 November, and the hours differ by 0.68 °C on average. `kos-era5.json` has the `ecmwf_ifs` cell, so the "ERA5" cell in the list above is really the default's. Decided: `models=era5`, and `kos-era5.json` is replaced with 90 days from it (28 August to 25 November).
+- **About 35 days of history cannot feed the backtest.** With a 21-day bias window and the real ERA5 lag they leave 1 backtest day at lead 1 and none after it, under our own n ≥ 10 rule. 90 days leave 50 to 56. Decided: 90 days.
+- **ERA5 ends in `null`.** In the new fixture the last 142 hours of every field are `null`, from 20 November 02:00: the last full day is 19 November, and 20 November has 2 hours. A day counts only with all 24. The shared type allows `null` for ERA5 only, the one response that sends it.
+- **The clock change is inside the 90 days.** Both APIs answer with one fixed +2 h, and 25 October has 24 distinct hours, so forecast and truth stay aligned. Before that date a "local day" runs from 01:00 to 01:00 summer time.
 
 ## Dependencies
 
