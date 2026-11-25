@@ -45,10 +45,14 @@ describe('Open-Meteo contract on real Kos samples', () => {
     expect(misalignedFields(previous.hourly)).toEqual([])
   })
 
-  it('ERA5: hourly truth on its own grid cell, aligned', () => {
+  it('ERA5 (models=era5): its own 0.25° cell, aligned, null only at the end', () => {
     expect(misalignedFields(era5.hourly)).toEqual([])
     expect(era5.hourly.time.length % 24).toBe(0)
-    expect(era5.longitude).not.toBe(forecast.longitude)
+    expect([era5.latitude, era5.longitude]).toEqual([37, 27.25])
+    const t = era5.hourly.temperature_2m
+    const firstNull = t.indexOf(null)
+    expect(firstNull).toBeGreaterThan(0)
+    expect(t.slice(firstNull).every((v) => v === null)).toBe(true)
   })
 
   it('geocoding with countryCode=GR puts Kos town first', () => {

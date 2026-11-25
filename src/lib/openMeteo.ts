@@ -1,6 +1,6 @@
 /**
  * Data contract with Open-Meteo, typed from real responses for Kos
- * (src/lib/fixtures, fetched 2026-11-25). Field names follow docs/open-meteo-brief.md.
+ * (src/lib/fixtures, fetched 2026-11-25; kos-era5.json on 2026-11-26). Field names follow docs/open-meteo-brief.md.
  * Shared types: change them only with Petros's OK.
  */
 
@@ -27,8 +27,8 @@ export interface ResponseMeta {
   timezone_abbreviation: string
 }
 
-/** Column-oriented series: `time` and every listed field have the same length. */
-export type Series<K extends string, T extends string = LocalDateTime> = { time: T[] } & Record<K, number[]>
+/** Column-oriented series: `time` and every listed field have the same length. `V` allows `null` only where the API sends it. */
+export type Series<K extends string, T extends string = LocalDateTime, V = number> = { time: T[] } & Record<K, V[]>
 export type Units<K extends string> = { time: string } & Record<K, string>
 
 // --- Forecast API (api.open-meteo.com/v1/forecast) ---
@@ -101,10 +101,13 @@ export interface PreviousRunsResponse extends ResponseMeta {
 
 export type Era5HourlyField = 'temperature_2m' | 'dew_point_2m' | 'wind_speed_10m'
 
-/** The "truth" for the backtest. Reanalysis, a few days late, on its own grid cell. */
+/**
+ * The "truth" for the backtest. Ask with `models=era5`: without it the archive answers with ECMWF IFS.
+ * Reanalysis on a 0.25° cell, about 7 days late: hours it has not reached yet are `null`, always at the end.
+ */
 export interface Era5Response extends ResponseMeta {
   hourly_units: Units<Era5HourlyField>
-  hourly: Series<Era5HourlyField>
+  hourly: Series<Era5HourlyField, LocalDateTime, number | null>
 }
 
 // --- Geocoding API (geocoding-api.open-meteo.com/v1/search) ---
