@@ -11,7 +11,7 @@ flowchart LR
   subgraph OM["Open-Meteo (keyless, CORS)"]
     FC["Forecast API<br/>current, hourly, daily<br/>past_days=28, forecast_days=7"]
     PR["Previous Runs API<br/>hourly _previous_day1..7"]
-    ERA["ERA5 archive API<br/>hourly truth, ~5 days late"]
+    ERA["ERA5 archive API, models=era5<br/>hourly truth, ~7 days late"]
     GEO["Geocoding API<br/>only if search ships"]
   end
 
@@ -81,10 +81,10 @@ sequenceDiagram
   F-->>A: ForecastResponse
   A->>U: render now, 4 weeks, 7 days (source only)
   par second opinion, in the background
-    A->>P: hourly _previous_day1..7, last ~35 days
+    A->>P: hourly _previous_day1..7, last 90 days
     P-->>A: PreviousRunsResponse
   and
-    A->>E: hourly truth, same window
+    A->>E: hourly truth, models=era5, same 90 days
     E-->>A: Era5Response
   end
   A->>C: align, bias per lead day, backtest
@@ -106,7 +106,7 @@ Failure paths:
 - Previous Runs or ERA5 fails: the base dashboard stays, the badge says "second opinion unavailable" with the reason, and the Corrected toggle is disabled.
 - On refresh failure the last good data stays on screen with a "last updated" time.
 
-Load per visit: 3 requests, plus 1 every 10 minutes. Open-Meteo weighs each request by days and variables (`X-RateLimit-Cost`, measured on 2026-11-26): the first Forecast request counts as 5.5 calls and a 7-day refresh as 2.2, against 600 a minute. A tab left open all day makes 144 refreshes, about 317 calls; repeating the full request would be 792.
+Load per visit: 3 requests, plus 1 every 10 minutes. Open-Meteo weighs each request by days and variables (`X-RateLimit-Cost`, measured on 2026-11-26): opening the page costs about 12.5 calls (Forecast 5.5, Previous Runs for 90 days 5.1, ERA5 for 90 days 1.9) and a 7-day refresh 2.2, against 600 a minute. A tab left open all day makes 144 refreshes, about 317 calls; repeating the full request would be 792.
 
 ## 3. Second opinion: correction and backtest
 
@@ -114,23 +114,23 @@ Variables: daily max and min temperature (°C). Others only if time allows.
 
 ```mermaid
 flowchart TD
-  A["Previous Runs: hourly temperature_2m_previous_dayL<br/>one locked model, L = 1..7"] --> B["Aggregate to daily max and min<br/>in Europe/Athens local time"]
-  C["ERA5: hourly temperature_2m"] --> D["Aggregate to daily max and min<br/>same local-time rule"]
+  A["Previous Runs: hourly temperature_2m_previous_dayL<br/>one locked model, L = 1..7, last 90 days"] --> B["Aggregate to daily max and min<br/>in Europe/Athens local time"]
+  C["ERA5, models=era5: hourly temperature_2m<br/>last 90 days, about 7 days late"] --> D["Aggregate to daily max and min, same local-time rule<br/>only days with all 24 hours"]
   B --> E["Align by local date<br/>forecast f(var, L, D) and truth t(var, D)"]
   D --> E
   E --> F["Error e = f - t<br/>per variable, lead L, date D"]
-  F --> G["Bias b(var, L, D) = mean of e over the 21 days<br/>whose truth was known before the forecast for D was issued"]
+  F --> G["Bias b(var, L, D) = mean of e over the latest 21 days<br/>whose truth existed on D - L, so up to D - L - 7"]
   G --> H["Corrected c = f - b"]
   H --> I["Backtest over the window:<br/>MAE source vs MAE corrected, per variable and lead"]
-  F --> J["80% band: 10th and 90th percentile<br/>of corrected residuals, per lead"]
-  I --> K{"MAE corrected lower than MAE source<br/>and n at least 10 days?"}
-  K -- yes --> L["Use correction for this variable and lead<br/>badge: 'corrected, X.X °C better over n days'"]
-  K -- no --> M["Use source<br/>badge: 'source wins, no correction'"]
-  L --> N["Apply to today's forecast: c = f - b, with band"]
-  J --> N
+  I --> K{"MAE corrected at least 0.1 °C below MAE source<br/>and n at least 10 days?"}
+  K -- yes --> L["Show corrected for this variable and lead<br/>badge: 'corrected, X.X °C better over n days'"]
+  K -- no --> M["Show the source unchanged<br/>badge: 'source wins, no correction'"]
+  L --> J["80% band: 10th and 90th percentile of the errors<br/>of the line we show, per lead"]
+  M --> J
+  J --> N["Next 7 days: the line we show, with its band"]
 ```
 
-The no-look-ahead rule: for a forecast of date D at lead L, issued on D − L, the bias may only use dates whose ERA5 truth existed on D − L (that is, dates up to about D − L − 5, because of the ERA5 lag). A test changes all future truth and checks that past corrections stay identical.
+The no-look-ahead rule: the forecast issued on day D − L (lead L for date D) is corrected only with truth that existed on D − L. ERA5 lags by 7 days (on 2026-11-26 the last full day was 19 November), so the bias uses dates up to D − L − 7. With the 5 days assumed before, the backtest would see 2 days that a live run would not have. A day counts only if ERA5 has all 24 hours: in the fixture, 20 November has 2 and stays out. A test changes all truth after D − L − 7 and checks that the correction for D stays identical.
 
 ## 4. File tree
 
@@ -141,7 +141,7 @@ src/
   index.css                    layout, desktop grid and mobile stack
   components/
     CurrentPanel.tsx           "now": temperature, feels-like, wind, gusts, dew point, rain, with units
-    HistoryChart.tsx           past 28 days: daily max/min line chart
+    HistoryChart.tsx           past 28 days: max/min chart, rain chart under it (mm, same dates)
     ForecastView.tsx           next 7 days: chart + table, source and corrected, 80% band
     SeriesToggles.tsx          on/off: Source, Corrected, 80% band
     TrackRecordBadge.tsx       verdict per variable from the backtest
@@ -152,6 +152,9 @@ src/
     openMeteo.test.ts          fixtures match the types and are aligned
     location.ts                Place type and the KOS default (shared, change only with an OK)
     forecastClient.ts(+test)   builds the Forecast URL, returns ForecastResponse or ApiError
+    days.ts(+test)             splits the daily series into the past 28 days and the next 7, by local date
+    weatherCode.ts(+test)      WMO weather code to text, from the table in the Open-Meteo docs
+    refresh.ts(+test)          what each request asks for: history on the first load, 7 days on a refresh
     previousRunsClient.ts(+test)  builds the Previous Runs URL for the locked model
     era5Client.ts(+test)       builds the ERA5 URL for the backtest window
     geocodingClient.ts(+test)  optional: search with countryCode, shows country and region
@@ -221,35 +224,38 @@ Mobile (< 900 px), one column in this order:
 +--------------------------+
 ```
 
-## 6. Open decisions
+## 6. Decisions
 
-| Decision | Options | Trade-offs | Proposal |
+Approved by Petros on 2026-11-26; the chosen option is in bold. Two proposals changed on approval: the decision rule needs a 0.1 °C margin, and the band comes from the errors of the line we show.
+
+| Decision | Options | Trade-offs | Chosen |
 | --- | --- | --- | --- |
-| Chart library (one only) | **Recharts** | Declarative JSX, `Area` with a `[low, high]` range draws the band, responsive container. 137 KB gzip over React, 39 packages (measured on 3.11.1). | **Decided 2026-11-26: Recharts 3.10.1, exact version, loaded lazily.** Readable in a live change during the call; the band is one component. Installed in the step 4 PR. |
+| Chart library (one only) | **Recharts** | Declarative JSX, `Area` with a `[low, high]` range draws the band, responsive container. 137 KB gzip over React, 39 packages (measured on 3.11.1). | **Recharts 3.10.1**, exact version, loaded lazily. Readable in a live change during the call; the band is one component. Installed in the step 4 PR. |
 | | uPlot | 23 KB gzip, 1 package, very fast. Imperative API and a React wrapper by hand; band needs a plugin or a fill between two series. | |
 | | Chart.js + react-chartjs-2 | Familiar. 65 KB gzip, 3 packages, canvas, band via `fill` between datasets. | |
 | How the 80% band shows | **Shaded area on the chart + range in the table** | Visible at a glance and exact in numbers. Needs a legend line. | **Shaded + table.** |
 | | Whiskers per day | Precise, but busy on 7 points × 2 series. | |
 | | Text only ("19–21 °C") | Simplest, no visual sense of spread. | |
-| Band method | **Empirical 10th/90th percentile of residuals** | No distribution assumption; noisy with n < 15. | **Empirical**, and hide the band when n < 10. |
+| Band method | **Empirical 10th/90th percentile of the errors of the line we show** | No distribution assumption; noisy with n < 15. The source's errors when the source wins, so the band describes the line on screen. | **Empirical, from the shown line**, hidden when n < 10. |
+| | Empirical, from the corrected errors only | The first draft. Describes the correction even when the page shows the source. | |
 | | Normal, ±1.28 σ | Smooth with small n; assumes symmetric errors. | |
 | Bias window | 14 / **21** / 28 days | Shorter follows regime changes, longer is steadier. 21 needs more history than ~35 days (next row). | **21 days.** |
-| History for the backtest | ~35 days (the diagram in section 2) | 1 backtest day at lead 1 and none from lead 2: the 7-day ERA5 lag and the 21-day window use it up, so n ≥ 10 is never met and the correction never shows. Previous Runs counts as 2.0 calls. | |
-| | **90 days** | 56 backtest days at lead 1, 50 at lead 7. 5.1 calls, 128 KB before compression. Crosses the 25 October clock change; both APIs answer with the same fixed +2 h, so they stay aligned. | **90 days.** To decide before step 5. |
+| History for the backtest | ~35 days (the first draft of section 2) | 1 backtest day at lead 1 and none from lead 2: the 7-day ERA5 lag and the 21-day window use it up, so n ≥ 10 is never met and the correction never shows. Previous Runs counts as 2.0 calls. | |
+| | **90 days** | 56 backtest days at lead 1, 50 at lead 7. 5.1 calls, 128 KB before compression. Crosses the 25 October clock change; both APIs answer with the same fixed +2 h, so they stay aligned. | **90 days.** |
 | | 180 days (`open-meteo-brief.md`) | 146 to 140 days. 10.3 calls, 256 KB before compression. | |
-| Truth for the backtest | **`models=era5`** | What every document and the footer promise. On 2026-11-26 the last full day was 19 November. Cell 37.0 N, 27.25 E (0.25°). Recent hours are `null`, which the shared type does not allow yet. | **`models=era5`**, with a fresh fixture. To decide before step 5. |
-| | Archive default (no `models`) | No lag, finer cell (36.872 N, 27.237 E), but it is not ERA5: 336 of 336 hours equal `ecmwf_ifs`, and it differs from ERA5 by 0.68 °C on average. `kos-era5.json` was fetched this way. If we keep it, the label changes. | |
+| Truth for the backtest | **`models=era5`** | What every document and the footer promise. On 2026-11-26 the last full day was 19 November. Cell 37.0 N, 27.25 E (0.25°). Recent hours are `null`; the shared type allows it for ERA5 only. | **`models=era5`**, fixture replaced (28 August to 25 November). A day counts only with all 24 hours. |
+| | Archive default (no `models`) | No lag, finer cell (36.872 N, 27.237 E), but it is not ERA5: 336 of 336 hours equal `ecmwf_ifs`, and it differs from ERA5 by 0.68 °C on average. The old `kos-era5.json` was fetched this way. | |
 | Locked model | **best_match (default)** | Same model as the base dashboard, matches the fixtures. Blend can change under us. | **best_match**, noted as a rough edge. |
 | | ecmwf_ifs025 | One fixed model, cleaner science; differs from what the base shows. | |
-| Decision rule | **MAE corrected < MAE source, n ≥ 10** | Simple and honest; small wins can be noise. | **This rule.** Margin test is roadmap. |
-| | Require a margin (e.g. 0.2 °C) | Fewer false wins; one more number to defend. | |
+| Decision rule | MAE corrected < MAE source, n ≥ 10 | The first draft. Simple, but a win of 0.04 °C would show as "0.0 °C better". | |
+| | **MAE corrected at least 0.1 °C below MAE source, n ≥ 10** | The badge never claims a win it cannot write with one decimal. One more number to defend. | **0.1 °C margin.** |
 | Refresh while tab hidden | **Pause, refresh on return** | Saves calls; shows a stale time until return. | **Pause.** |
 | | Keep refreshing | Always fresh; wastes calls. | |
-| Helper files for step 4 | **`src/lib/days.ts`, `weatherCode.ts`, `refresh.ts`, each with a test** | Split past and next days, WMO code to text, what a refresh asks for. This is logic, so it belongs in `src/lib`, but `briefs/ui-base.md` lists only `forecastClient.ts`. | **Add the three to the brief.** To decide before step 4. |
+| Helper files for step 4 | **`src/lib/days.ts`, `weatherCode.ts`, `refresh.ts`, each with a test** | Split past and next days, WMO code to text, what a refresh asks for. This is logic, so it belongs in `src/lib`, but `briefs/ui-base.md` lists only `forecastClient.ts`. | **Added to `briefs/ui-base.md`.** |
 | | Logic inside components | No new files; breaks the thin-UI rule and has no tests. | |
-| Rain in the 28-day chart | **Own small chart under temperature, with a mm axis** | Every value keeps its unit. A little more height. | **Own chart.** To decide before step 4. |
+| Rain in the 28-day chart | **Own small chart under temperature, with a mm axis** | Every value keeps its unit. A little more height. | **Own chart, same dates.** |
 | | Bars in the temperature chart, 45% of its height (`ui-design.md`) | Compact, as in the mockup; the bars have no axis and no unit. | |
-| Fonts | **System fonts** | Nothing to load, no third party. Looks less like the mockup. | **System fonts.** To decide before step 4. |
+| Fonts | **System fonts** | Nothing to load, no third party. Looks less like the mockup. | **System fonts.** |
 | | Space Grotesk and Inter (`ui-design.md`) | As in the mockup. Google Fonts sends each visitor's IP to a third party; self-hosting adds font files. | |
 
 New dependency: Recharts 3.10.1 only, approved on 2026-11-26. Nothing else is planned.
@@ -261,11 +267,11 @@ New dependency: Recharts 3.10.1 only, approved on 2026-11-26. Nothing else is pl
 | Fixtures match the types; time arrays align with every field | Layout on desktop and on a phone width |
 | Each client builds a URL with exactly the brief's fields and parameters | Charts readable: axes, units, legend, colours |
 | `ApiError` is detected and its `reason` passes through | Toggles turn series and band on and off |
-| `align`: local-date aggregation, midnight edge, the 25 Oct DST change | Badge wording is true and short, including "source wins" |
-| No look-ahead: changing future truth leaves past corrections identical | Error state appears when the network is off |
+| `align`: local-date aggregation, midnight edge, the 25 Oct DST change, days with fewer than 24 hours left out | Badge wording is true and short, including "source wins" |
+| No look-ahead: changing truth after D − L − 7 leaves the correction for D identical | Error state appears when the network is off |
 | `bias`, `backtest`, `metrics` on small hand-made series with known answers | Footer link to Open-Meteo works |
-| Percentile band and the n ≥ 10 rule | Values plausible for Kos in late November (about 13–23 °C) |
-| Refresh logic refetches the forecast only (pure scheduler function) | Refresh: "updated" time changes after 10 minutes |
+| Band from the shown line's errors, the n ≥ 10 rule and the 0.1 °C margin | Values plausible for Kos in late November (about 13–23 °C) |
+| `refresh.ts`: the first load asks for the history, a refresh for 7 days only | Refresh: "updated" time changes after 10 minutes |
 
 No component tests: they would need Testing Library and jsdom, which are new dependencies. Ask first if wanted.
 

@@ -26,7 +26,7 @@ Container max width 1200 px, padding 32 px 40 px on desktop, 16 px on mobile, 20
   - Chart: daily max and min. Corrected is solid blue at 3 px with dots on the max. Source is dashed grey at 2 px. The band is blue at 14% opacity.
   - Legend under the chart: "80% band: 8 in 10 past errors fell inside".
   - Table columns: Day, Sky, Source max, Ours max, 80% range, Gap, Min, Rain. It scrolls sideways under 520 px.
-- **Past 4 weeks:** max line (orange), min line (blue), rain bars (light blue, scaled to 45% of the chart height). One summary line: wettest and warmest day.
+- **Past 4 weeks:** a temperature chart with the max line (orange) and the min line (blue); under it a rain chart with light-blue bars, its own mm axis and the same dates. One summary line: wettest and warmest day.
 - **Footer:** "Weather data by Open-Meteo.com" (link) · "licensed CC BY 4.0" (link) · "truth for the backtest: ERA5 via Open-Meteo".
 
 ## Tokens
@@ -42,11 +42,14 @@ Container max width 1200 px, padding 32 px 40 px on desktop, 16 px on mobile, 20
 | max | `#B4501A` | past max line |
 | rain | `#9DB8D3` | rain bars |
 | badge | bg `#EAF1F8`, border `#C5D7EA` | second-opinion box |
-| fonts | Space Grotesk 500/600 for title and big numbers, Inter 400/500/600 for the rest | |
+| fonts | system fonts (`system-ui`): 600 for title and big numbers, 400/500 for the rest | |
 
 Buttons are at least 44 px tall. Selected: ink background with white text. Off: white background with a `#8C97A3` border.
 
+## Changes from the mockup
+
+Decided in architecture.md section 6: rain has its own chart, the fonts are the system's, and the charts use Recharts 3.10.1. The mockup draws plain SVG only to show the look.
+
 ## Not decided here
 
-- Rain bars and fonts: open in architecture.md section 6. The chart library is decided there (Recharts 3.10.1). The mockup draws plain SVG only to show the look.
 - The numbers in the mockup's corrected series, band and badge are illustrative until step 5.

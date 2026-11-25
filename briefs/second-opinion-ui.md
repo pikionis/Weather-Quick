@@ -18,6 +18,7 @@ Read only: `src/lib/**` (shared types and the correction). Need a change there? 
 
 - No logic in components: call the functions from `src/lib/correction/`.
 - Explain the method in one line on the page, with a link to ADR 0002.
+- The badge says the correction won only if it was at least 0.1 °C better. The band comes from the errors of the line on screen.
 - If Previous Runs or ERA5 fail (rate limit), show the source alone and say why.
 
 ## Pull request
