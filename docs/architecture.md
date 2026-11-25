@@ -60,7 +60,7 @@ flowchart LR
 Rules the diagram encodes:
 
 - Components never call `fetch` or do arithmetic on weather data. They render what `src/lib` returns.
-- `openMeteo.ts` and `location.ts` are shared and change only in the architect window.
+- `openMeteo.ts` and `location.ts` are shared and change only with Petros's OK.
 - Kos is fixed. Geocoding appears only if search fits the time budget, and every result shows country and region.
 
 ## 2. Load and refresh
@@ -92,12 +92,12 @@ sequenceDiagram
   A->>U: show Corrected, band and badge
 
   Note over U,C: Every 10 minutes (paused while the tab is hidden)
-  A->>F: same Forecast request
+  A->>F: current + hourly + daily, forecast_days=7, no past_days
   F-->>A: new current and forecast
   A->>C: reapply cached bias to the new forecast
   C-->>A: corrected series
   A->>U: re-render
-  Note over A,E: Not refetched: Previous Runs and ERA5. They change once a day,<br/>so bias and backtest are kept until a full reload.
+  Note over A,E: Not refetched: history, Previous Runs and ERA5. They change once a day,<br/>so history, bias and backtest are kept until a full reload.
 ```
 
 Failure paths:
@@ -106,7 +106,7 @@ Failure paths:
 - Previous Runs or ERA5 fails: the base dashboard stays, the badge says "second opinion unavailable" with the reason, and the Corrected toggle is disabled.
 - On refresh failure the last good data stays on screen with a "last updated" time.
 
-Load per visit: 3 calls, plus 1 every 10 minutes. Well under Open-Meteo's 600 a minute and 10,000 a day.
+Load per visit: 3 requests, plus 1 every 10 minutes. Open-Meteo weighs each request by days and variables (`X-RateLimit-Cost`, measured on 2026-11-26): the first Forecast request counts as 5.5 calls and a 7-day refresh as 2.2, against 600 a minute. A tab left open all day makes 144 refreshes, about 317 calls; repeating the full request would be 792.
 
 ## 3. Second opinion: correction and backtest
 
@@ -140,7 +140,7 @@ src/
   App.tsx                      holds state, runs the 10-minute refresh, wires lib to components
   index.css                    layout, desktop grid and mobile stack
   components/
-    CurrentPanel.tsx           "now": temperature, feels-like, wind, humidity, with units
+    CurrentPanel.tsx           "now": temperature, feels-like, wind, gusts, dew point, rain, with units
     HistoryChart.tsx           past 28 days: daily max/min line chart
     ForecastView.tsx           next 7 days: chart + table, source and corrected, 80% band
     SeriesToggles.tsx          on/off: Source, Corrected, 80% band
@@ -148,9 +148,9 @@ src/
     ErrorState.tsx             API reason, retry button
     Footer.tsx                 "Weather data by Open-Meteo.com" (CC BY 4.0), last updated
   lib/
-    openMeteo.ts               response types, isApiError, misalignedFields (shared, architect only)
+    openMeteo.ts               response types, isApiError, misalignedFields (shared, change only with an OK)
     openMeteo.test.ts          fixtures match the types and are aligned
-    location.ts                Place type and the KOS default (shared, architect only)
+    location.ts                Place type and the KOS default (shared, change only with an OK)
     forecastClient.ts(+test)   builds the Forecast URL, returns ForecastResponse or ApiError
     previousRunsClient.ts(+test)  builds the Previous Runs URL for the locked model
     era5Client.ts(+test)       builds the ERA5 URL for the backtest window
@@ -176,7 +176,7 @@ Desktop (≥ 900 px):
 | NOW                       | NEXT 7 DAYS                                  |
 |  17.4 °C  feels 16.0 °C   |  [x] Source  [x] Corrected  [x] 80% band     |
 |  wind 22 km/h NW          |  °C                                          |
-|  humidity 71 %            |  24|   ___----___      shaded = 80% band     |
+|  dew point 11.8 °C        |  24|   ___----___      shaded = 80% band     |
 |                           |  18|--/          \---  solid = corrected      |
 | SECOND OPINION            |  12|                   dashed = source        |
 | [badge] Max temp:         |     Thu Fri Sat Sun Mon Tue Wed              |
@@ -225,23 +225,34 @@ Mobile (< 900 px), one column in this order:
 
 | Decision | Options | Trade-offs | Proposal |
 | --- | --- | --- | --- |
-| Chart library (one only) | **Recharts** | Declarative JSX, `Area` with a `[low, high]` range draws the band, responsive container. About 100 kB gzip. | **Recharts.** Readable in a live change during the call; the band is one component. |
-| | uPlot | About 15 kB, very fast. Imperative API and a React wrapper by hand; band needs a plugin or a fill between two series. | |
-| | Chart.js + react-chartjs-2 | Familiar. Two dependencies, canvas, band via `fill` between datasets. | |
+| Chart library (one only) | **Recharts** | Declarative JSX, `Area` with a `[low, high]` range draws the band, responsive container. 137 KB gzip over React, 39 packages (measured on 3.11.1). | **Decided 2026-11-26: Recharts 3.10.1, exact version, loaded lazily.** Readable in a live change during the call; the band is one component. Installed in the step 4 PR. |
+| | uPlot | 23 KB gzip, 1 package, very fast. Imperative API and a React wrapper by hand; band needs a plugin or a fill between two series. | |
+| | Chart.js + react-chartjs-2 | Familiar. 65 KB gzip, 3 packages, canvas, band via `fill` between datasets. | |
 | How the 80% band shows | **Shaded area on the chart + range in the table** | Visible at a glance and exact in numbers. Needs a legend line. | **Shaded + table.** |
 | | Whiskers per day | Precise, but busy on 7 points × 2 series. | |
 | | Text only ("19–21 °C") | Simplest, no visual sense of spread. | |
 | Band method | **Empirical 10th/90th percentile of residuals** | No distribution assumption; noisy with n < 15. | **Empirical**, and hide the band when n < 10. |
 | | Normal, ±1.28 σ | Smooth with small n; assumes symmetric errors. | |
-| Bias window | 14 / **21** / 28 days | Shorter follows regime changes, longer is steadier. 21 leaves 10+ backtest days within the Previous Runs history we fetch. | **21 days.** |
+| Bias window | 14 / **21** / 28 days | Shorter follows regime changes, longer is steadier. 21 needs more history than ~35 days (next row). | **21 days.** |
+| History for the backtest | ~35 days (the diagram in section 2) | 1 backtest day at lead 1 and none from lead 2: the 7-day ERA5 lag and the 21-day window use it up, so n ≥ 10 is never met and the correction never shows. Previous Runs counts as 2.0 calls. | |
+| | **90 days** | 56 backtest days at lead 1, 50 at lead 7. 5.1 calls, 128 KB before compression. Crosses the 25 October clock change; both APIs answer with the same fixed +2 h, so they stay aligned. | **90 days.** To decide before step 5. |
+| | 180 days (`open-meteo-brief.md`) | 146 to 140 days. 10.3 calls, 256 KB before compression. | |
+| Truth for the backtest | **`models=era5`** | What every document and the footer promise. On 2026-11-26 the last full day was 19 November. Cell 37.0 N, 27.25 E (0.25°). Recent hours are `null`, which the shared type does not allow yet. | **`models=era5`**, with a fresh fixture. To decide before step 5. |
+| | Archive default (no `models`) | No lag, finer cell (36.872 N, 27.237 E), but it is not ERA5: 336 of 336 hours equal `ecmwf_ifs`, and it differs from ERA5 by 0.68 °C on average. `kos-era5.json` was fetched this way. If we keep it, the label changes. | |
 | Locked model | **best_match (default)** | Same model as the base dashboard, matches the fixtures. Blend can change under us. | **best_match**, noted as a rough edge. |
 | | ecmwf_ifs025 | One fixed model, cleaner science; differs from what the base shows. | |
 | Decision rule | **MAE corrected < MAE source, n ≥ 10** | Simple and honest; small wins can be noise. | **This rule.** Margin test is roadmap. |
 | | Require a margin (e.g. 0.2 °C) | Fewer false wins; one more number to defend. | |
 | Refresh while tab hidden | **Pause, refresh on return** | Saves calls; shows a stale time until return. | **Pause.** |
 | | Keep refreshing | Always fresh; wastes calls. | |
+| Helper files for step 4 | **`src/lib/days.ts`, `weatherCode.ts`, `refresh.ts`, each with a test** | Split past and next days, WMO code to text, what a refresh asks for. This is logic, so it belongs in `src/lib`, but `briefs/ui-base.md` lists only `forecastClient.ts`. | **Add the three to the brief.** To decide before step 4. |
+| | Logic inside components | No new files; breaks the thin-UI rule and has no tests. | |
+| Rain in the 28-day chart | **Own small chart under temperature, with a mm axis** | Every value keeps its unit. A little more height. | **Own chart.** To decide before step 4. |
+| | Bars in the temperature chart, 45% of its height (`ui-design.md`) | Compact, as in the mockup; the bars have no axis and no unit. | |
+| Fonts | **System fonts** | Nothing to load, no third party. Looks less like the mockup. | **System fonts.** To decide before step 4. |
+| | Space Grotesk and Inter (`ui-design.md`) | As in the mockup. Google Fonts sends each visitor's IP to a third party; self-hosting adds font files. | |
 
-New dependency to approve now: the chart library only. Nothing else is planned.
+New dependency: Recharts 3.10.1 only, approved on 2026-11-26. Nothing else is planned.
 
 ## 7. Tests vs eye
 
@@ -266,24 +277,22 @@ Used so far: 0:55 logged, plus about 0:15 for this document. Left: about 4:50.
 gantt
   dateFormat HH:mm
   axisFormat %H:%M
-  title Remaining budget (hours of work, not clock time)
-  section Parallel
-  PR step 4 UI base (ui window)            :a, 00:00, 75m
-  PR step 5 correction + backtest          :b, 00:00, 105m
-  section After both merge
+  title Remaining budget (hours of work, one step at a time)
+  section Steps
+  PR step 4 UI base                        :a, 00:00, 75m
+  PR step 5 correction + backtest          :b, after a, 105m
   PR step 6 second-opinion UI              :c, after b, 45m
-  section Architect
   Step 7 notes, ai logs, Vercel, rehearsal :d, after c, 40m
   Buffer                                   :e, after d, 25m
 ```
 
-| PR | Window | Branch | Estimate | Depends on |
-| --- | --- | --- | --- | --- |
-| Step 4: UI base | ui | `feat/ui-base` | 1:15 | this doc approved |
-| Step 5: correction + backtest | correction | `feat/second-opinion` | 1:45 | this doc approved |
-| Step 6: second-opinion UI | ui | `feat/second-opinion-ui` | 0:45 | 4 and 5 merged |
-| Step 7: NOTES, ai/, deploy, rehearsal | architect | `claude/...` | 0:40 | 6 merged |
-| Buffer | | | 0:25 | |
-| **Total** | | | **4:50** | |
+| PR | Branch | Estimate | Depends on |
+| --- | --- | --- | --- |
+| Step 4: UI base | `feat/ui-base` | 1:15 | this doc approved and merged |
+| Step 5: correction + backtest | `feat/second-opinion` | 1:45 | 4 merged |
+| Step 6: second-opinion UI | `feat/second-opinion-ui` | 0:45 | 5 merged |
+| Step 7: NOTES, ai/, deploy, rehearsal | `feat/wrap-up` | 0:40 | 6 merged |
+| Buffer | | 0:25 | |
+| **Total** | | **4:50** | |
 
-Billed time counts each window's work, so steps 4 and 5 add up (3:00) even though they run side by side. If step 5 runs over, cut in this order: min temperature (keep max only), then the band, then geocoding (already optional).
+One agent takes the steps in this order, one PR each. If step 5 runs over, cut in this order: min temperature (keep max only), then the band, then geocoding (already optional).

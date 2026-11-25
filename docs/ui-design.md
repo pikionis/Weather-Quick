@@ -2,7 +2,7 @@
 
 Status: approved by Petros on 2026-11-26 as good enough to build. Mockup: https://claude.ai/artifact/RTfTBPYEAEwehKEqQ8jzdq (desktop and mobile; private to the owner).
 
-The ASCII wireframes in [architecture.md](architecture.md#5-wireframes) give the layout. This file gives the details the UI windows build from. Copy is in English.
+The ASCII wireframes in [architecture.md](architecture.md#5-wireframes) give the layout. This file gives the details steps 4 and 6 build from. Copy is in English.
 
 ## Layout
 
@@ -48,5 +48,5 @@ Buttons are at least 44 px tall. Selected: ink background with white text. Off: 
 
 ## Not decided here
 
-- Chart library (proposal: Recharts, in architecture.md section 6). The mockup draws plain SVG only to show the look.
+- Rain bars and fonts: open in architecture.md section 6. The chart library is decided there (Recharts 3.10.1). The mockup draws plain SVG only to show the look.
 - The numbers in the mockup's corrected series, band and badge are illustrative until step 5.
