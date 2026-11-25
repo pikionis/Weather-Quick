@@ -24,4 +24,4 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architec
 
 ## Done
 
-Tests pass (including the look-ahead test), lint passes, committed, NOTES.md updated with the backtest numbers on the fixture.
+Tests pass (including the look-ahead test), lint passes, committed. Put the backtest numbers on the fixture and any rough edges in the PR description; the architect window moves them into NOTES.md at merge.

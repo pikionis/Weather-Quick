@@ -25,4 +25,4 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architec
 
 ## Done
 
-Works in the browser on fixtures and live, tests pass, lint passes, committed, NOTES.md "Rough edges" updated.
+Works in the browser on fixtures and live, tests pass, lint passes, committed. Rough edges and decisions go in the PR description; the architect window moves them into NOTES.md at merge.
