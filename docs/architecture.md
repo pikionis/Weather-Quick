@@ -277,23 +277,15 @@ No component tests: they would need Testing Library and jsdom, which are new dep
 
 ## 8. PR order and time
 
-Used so far: 2:20 of 6:00 (`docs/timelog.md`). Left: 3:40. The plan needed 4:50, so it does not fit by 1:10.
+Used so far: 2:20 (`docs/timelog.md`). The steps below take about 4:40 more, about 7:00 in all, past the 6-hour estimate. On 2026-11-26 Petros chose the full scope over the estimate, so nothing is cut.
 
-Proposed cuts, waiting for Petros's OK:
+| PR | Branch | Estimate | Depends on |
+| --- | --- | --- | --- |
+| Step 4: UI base | `feat/ui-base` | 1:15 | this doc approved and merged |
+| Step 5: correction + backtest | `feat/second-opinion` | 1:35 | 4 merged |
+| Step 6: second-opinion UI | `feat/second-opinion-ui` | 0:45 | 5 merged |
+| Step 7: NOTES, ai/, deploy, rehearsal | `feat/wrap-up` | 0:40 | 6 merged |
+| Buffer | | 0:25 | |
+| **Total** | | **4:40** | |
 
-1. Step 4 shows the next 7 days as a table only. The 7-day chart is built once, in step 6, with source and corrected together.
-2. Step 5 starts with the ERA5 fixture and the nullable type already done in this PR.
-3. Confidence is "± X.X °C" per lead: the backtest MAE of the line we show, in the table and the badge. No shaded 80% band, so no percentiles in step 5 and no area or legend in step 6.
-4. Step 6 has no series toggles: both lines are always on.
-5. Step 7 keeps one rehearsal of a live change.
-
-| PR | Branch | Estimate | With the cuts | Depends on |
-| --- | --- | --- | --- | --- |
-| Step 4: UI base | `feat/ui-base` | 1:15 | 1:00 | this doc approved and merged |
-| Step 5: correction + backtest | `feat/second-opinion` | 1:45 | 1:25 | 4 merged |
-| Step 6: second-opinion UI | `feat/second-opinion-ui` | 0:45 | 0:25 | 5 merged |
-| Step 7: NOTES, ai/, deploy, rehearsal | `feat/wrap-up` | 0:40 | 0:35 | 6 merged |
-| Buffer | | 0:25 | 0:15 | |
-| **Total** | | **4:50** | **3:40** | |
-
-One agent takes the steps in this order, one PR each. If step 5 still runs over, the next cut is min temperature (keep max only).
+One agent takes the steps in this order, one PR each. Step 5 is 0:10 shorter than first planned because the ERA5 fixture and its type are done in this PR.

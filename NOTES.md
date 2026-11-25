@@ -32,6 +32,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **80% band from the corrected errors only** (same draft). Chosen instead: from the errors of the line we show, the source's when the source wins. Why: the band has to describe the line on screen.
 - **Rain bars inside the temperature chart, without an axis** (the mockup in `docs/ui-design.md`). Chosen instead: a rain chart of its own under the temperature, with a mm axis and the same dates. Why: every value shows its unit.
 - **Space Grotesk and Inter** (the mockup). Chosen instead: system fonts. Why: nothing to load and no third-party request.
+- **Cuts to fit the 3:40 left** (proposed by the AI: the next 7 days as a table only in step 4, "± X.X °C" instead of the 80% band, no series toggles, a shorter rehearsal). Chosen instead: the full plan, about 7:00 in all. Why: Petros cares more about the full scope than about the 6-hour estimate.
 
 ## What real responses taught us (2026-11-25)
 
