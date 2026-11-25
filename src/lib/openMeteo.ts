@@ -1,7 +1,7 @@
 /**
  * Data contract with Open-Meteo, typed from real responses for Kos
  * (src/lib/fixtures, fetched 2026-11-25). Field names follow docs/open-meteo-brief.md.
- * Shared types: change them only in the architect window.
+ * Shared types: change them only with Petros's OK.
  */
 
 /** Local date-time without offset, e.g. "2026-11-25T22:15". */

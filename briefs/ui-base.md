@@ -1,6 +1,6 @@
 # Brief: UI base
 
-Owner: worker window "ui". Worktree `../weather-quick-ui`, branch `feat/ui-base`.
+Step 4. Branch `feat/ui-base`, from the updated `main`.
 
 ## Goal
 
@@ -12,7 +12,7 @@ The base of the brief: for Kos, show the weather now, the past 28 days and the n
 - `src/components/**`
 - `src/lib/forecastClient.ts` and its test: builds the Forecast API URL, fetches it, returns `ForecastResponse` or `ApiError`.
 
-Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architect only), `src/lib/fixtures/**`.
+Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types: change only with Petros's OK), `src/lib/fixtures/**`.
 
 ## Rules
 
@@ -25,9 +25,9 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architec
 
 ## Pull request
 
-- Work only on your branch, and open a PR from it to `main`, so Codex reviews it before the merge. The architect window merges.
-- Do not write to `NOTES.md`. Put what you decided, rejected or left rough in the PR description; the architect moves it into `NOTES.md` at merge.
+- Open a PR from the branch to `main`, so Codex reviews it before the merge. Merge only with Petros's OK.
+- Update `NOTES.md` in the same PR: what was decided, rejected or left rough.
 
 ## Done
 
-Works in the browser on fixtures and live, tests pass, lint passes, committed. Rough edges and decisions go in the PR description; the architect window moves them into NOTES.md at merge.
+Works in the browser on fixtures and live, tests pass, lint passes, committed, `NOTES.md` updated.
