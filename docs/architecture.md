@@ -165,6 +165,8 @@ src/
 
 ## 5. Wireframes
 
+Visual details (colours, type, copy, chart styling) are in [ui-design.md](ui-design.md).
+
 Desktop (≥ 900 px):
 
 ```text
