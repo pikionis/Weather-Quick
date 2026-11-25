@@ -23,6 +23,11 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architec
 - One chart library. Propose one to Petros, with the reason, before installing it.
 - No second opinion here. Leave a slot in the 7-day view where the corrected forecast will go.
 
+## Pull request
+
+- Work only on your branch, and open a PR from it to `main`, so Codex reviews it before the merge. The architect window merges.
+- Do not write to `NOTES.md`. Put what you decided, rejected or left rough in the PR description; the architect moves it into `NOTES.md` at merge.
+
 ## Done
 
 Works in the browser on fixtures and live, tests pass, lint passes, committed. Rough edges and decisions go in the PR description; the architect window moves them into NOTES.md at merge.

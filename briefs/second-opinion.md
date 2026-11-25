@@ -22,6 +22,11 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architec
 - If the backtest shows the source is better, return that result, do not hide it.
 - No UI, no new dependency.
 
+## Pull request
+
+- Work only on your branch, and open a PR from it to `main`, so Codex reviews it before the merge. The architect window merges.
+- Do not write to `NOTES.md`. Put what you decided, rejected or left rough in the PR description; the architect moves it into `NOTES.md` at merge.
+
 ## Done
 
 Tests pass (including the look-ahead test), lint passes, committed. Put the backtest numbers on the fixture and any rough edges in the PR description; the architect window moves them into NOTES.md at merge.
