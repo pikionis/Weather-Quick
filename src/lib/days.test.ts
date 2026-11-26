@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import forecastJson from './fixtures/kos-forecast.json'
-import { dateLabel, extremes, splitDays, todayOf, toDays, weekdayLabel, type Day } from './days'
+import {
+  dateLabel,
+  dateTimeLabel,
+  extremes,
+  splitDays,
+  todayOf,
+  toDays,
+  weekdayAndDay,
+  weekdayLabel,
+  type Day,
+} from './days'
 import type { ForecastResponse } from './openMeteo'
 
 const forecast = forecastJson satisfies ForecastResponse
@@ -51,5 +61,7 @@ describe('days', () => {
   it('labels local dates without shifting them', () => {
     expect(weekdayLabel('2026-11-26')).toBe('Thu 26')
     expect(dateLabel('2026-10-28')).toBe('28 Oct')
+    expect(weekdayAndDay('2026-12-01')).toEqual(['Tue', '1'])
+    expect(dateTimeLabel('2026-11-26T14:00')).toBe('Thu 26 Nov, 14:00')
   })
 })

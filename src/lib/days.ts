@@ -1,4 +1,4 @@
-import type { ForecastResponse, LocalDate } from './openMeteo'
+import type { ForecastResponse, LocalDate, LocalDateTime } from './openMeteo'
 
 /** One local day of the Forecast API's `daily` block. */
 export interface Day {
@@ -51,7 +51,14 @@ const asUtc = (date: LocalDate) => new Date(`${date}T00:00:00Z`)
 const weekdayDay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
+const weekdayOnly = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' })
+const weekdayDayMonth = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+
 /** "Thu 26" */
 export const weekdayLabel = (date: LocalDate) => weekdayDay.format(asUtc(date))
 /** "28 Oct" */
 export const dateLabel = (date: LocalDate) => dayMonth.format(asUtc(date))
+/** ["Thu", "26"], for a label set on two lines. */
+export const weekdayAndDay = (date: LocalDate): [string, string] => [weekdayOnly.format(asUtc(date)), String(Number(date.slice(8, 10)))]
+/** "Thu 26 Nov, 14:00" for a local date-time such as "2026-11-26T14:00". */
+export const dateTimeLabel = (time: LocalDateTime) => `${weekdayDayMonth.format(asUtc(time.slice(0, 10)))}, ${time.slice(11, 16)}`
