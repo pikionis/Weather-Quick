@@ -1,6 +1,6 @@
 # Brief: second opinion (correction and backtest)
 
-Owner: worker window "correction". Worktree `../weather-quick-correction`, branch `feat/second-opinion`.
+Step 5, after `feat/ui-base` is merged. Branch `feat/second-opinion`, from the updated `main`.
 
 ## Goal
 
@@ -11,22 +11,23 @@ Pure functions that turn Previous Runs + ERA5 into a corrected daily forecast pe
 - `src/lib/correction/**`: `align.ts` (hourly to daily in local time, join forecast and truth by date), `bias.ts`, `backtest.ts`, `metrics.ts`, each with a `*.test.ts`.
 - `src/lib/previousRunsClient.ts`, `src/lib/era5Client.ts` and their tests.
 
-Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types, architect only), `src/lib/fixtures/**`. Need a new shared type? Ask the architect window.
+Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types: change only with Petros's OK), `src/lib/fixtures/**`. Need a new shared type? Ask Petros.
 
 ## Rules
 
-- No look-ahead: the correction for day D uses only data known before D. Write a test that fails if it does.
+- No look-ahead: the forecast issued on day D − L (lead L for date D) is corrected only with truth that existed on D − L. ERA5 lags by 7 days, so the bias uses dates up to D − L − 7. Write a test that fails if it does.
 - Daily max and min temperature first. Daily values in local time (Europe/Athens).
-- ERA5 lags: days without truth stay out of the backtest.
-- The fixture has lead days 1, 3 and 7 only, for 15 days. Tests use it; the live client requests days 1 to 7.
-- If the backtest shows the source is better, return that result, do not hide it.
+- ERA5 comes from `models=era5`. A day enters the backtest only if it has all 24 hours; the fixture ends with a partial day (20 November, 2 hours).
+- Fixtures: Previous Runs has lead days 1, 3 and 7 only, for 15 days; ERA5 has 90 days. Tests use them; the live clients request lead days 1 to 7 and the last 90 days.
+- The correction wins only if its MAE is at least 0.1 °C below the source's, with n ≥ 10. Otherwise return the source as the winner, do not hide it.
+- The 80% band comes from the errors of the line we show: the source's when the source wins.
 - No UI, no new dependency.
 
 ## Pull request
 
-- Work only on your branch, and open a PR from it to `main`, so Codex reviews it before the merge. The architect window merges.
-- Do not write to `NOTES.md`. Put what you decided, rejected or left rough in the PR description; the architect moves it into `NOTES.md` at merge.
+- Open a PR from the branch to `main`, so Codex reviews it before the merge. Merge only with Petros's OK.
+- Update `NOTES.md` in the same PR: what was decided, rejected or left rough.
 
 ## Done
 
-Tests pass (including the look-ahead test), lint passes, committed. Put the backtest numbers on the fixture and any rough edges in the PR description; the architect window moves them into NOTES.md at merge.
+Tests pass (including the look-ahead test), lint passes, committed, `NOTES.md` updated with the backtest numbers on the fixture and any rough edges.

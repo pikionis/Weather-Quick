@@ -19,13 +19,14 @@ Use them as guidance only. Never copy their content into this repo.
 - Data: Open-Meteo only (keyless). No API keys anywhere in the client.
 - One chart library. Ask me before adding any other dependency.
 
-## Parallel windows
-- One architect window plans, merges and reviews. Each worker window owns
-  one brief in briefs/, in its own git worktree and branch.
-- Touch only the files your brief owns. Shared types change only in the
-  architect window.
-
 ## How we work
+- One agent, one step at a time, in the order of briefs/: ui-base (step 4),
+  second-opinion (5), second-opinion-ui (6).
+- Each step is a new branch from the updated main and a PR to main, so Codex
+  reviews it. Merge only with my OK.
+- Each step touches only the files its brief owns. Shared types change only
+  with my OK.
+- NOTES.md is updated inside every PR.
 - Before each step: restate the goal, list assumptions and open questions,
   propose a short plan. Wait for my OK.
 - Never guess API fields. Check the Open-Meteo docs and show me a real
