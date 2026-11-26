@@ -11,3 +11,8 @@ export function addDays(date: LocalDate, days: number): LocalDate {
 export function lastDays(today: LocalDate, days: number): { start: LocalDate; end: LocalDate } {
   return { start: addDays(today, -(days - 1)), end: today }
 }
+
+/** Whole days from `from` to `to`: 1 for tomorrow, negative for the past. */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
+}
