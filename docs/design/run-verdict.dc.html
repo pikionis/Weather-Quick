@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Weather Quick · Best days to run</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F3F5F7}
+a{color:#1F5FA0}a:hover{color:#14466F}
+.eyebrow{margin:0;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#4A5663}
+.seg{min-height:44px;padding:0 14px;border:1px solid #8C97A3;border-left-width:0;background:#FFFFFF;color:#14202B;font:inherit;font-size:14px;cursor:pointer}
+.seg:first-child{border-radius:8px 0 0 8px;border-left-width:1px}.seg:last-child{border-radius:0 8px 8px 0}
+.seg[aria-pressed="true"]{background:#14202B;color:#FFFFFF;border-color:#14202B}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #6FA8E0;outline-offset:2px}
+.chip{display:inline-block;padding:3px 9px;border-radius:999px;background:#F0F3F6;border:1px solid #DCE2E8;font-size:12px;color:#14202B}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid #E7ECF0;text-align:left;vertical-align:top}
+thead th{font-weight:500;color:#4A5663;border-bottom:1px solid #DCE2E8}
+summary{cursor:pointer;font-weight:600;font-size:14px;min-height:44px;display:flex;align-items:center}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 100vh; background: #F3F5F7; color: #14202B; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 32px; display: flex; flex-direction: column; gap: 8px">
+<p class="eyebrow">New box in the Overview, under the Now row</p>
+<section id="run" aria-labelledby="hrun" style="box-sizing: border-box; background: #FFFFFF; border: 1px solid #DCE2E8; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div style="flex: 1 1 360px">
+<h2 id="hrun" style="margin: 0; font-size: 17px; font-weight: 600">Best days to run</h2>
+<p style="margin: 4px 0 0; font-size: 13px; color: #4A5663">A score from 0 to 100 for each day: rain, wind, heat and humidity in its best two hours.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<p id="when" style="margin: 0; font-size: 12px; color: #4A5663">When do you run?</p>
+<div role="group" aria-labelledby="when" style="display: flex; flex-wrap: wrap">
+<button type="button" class="seg" aria-pressed="{{ mP }}" onClick="{{ setMorning }}">Morning</button>
+<button type="button" class="seg" aria-pressed="{{ dP }}" onClick="{{ setMidday }}">Midday</button>
+<button type="button" class="seg" aria-pressed="{{ eP }}" onClick="{{ setEvening }}">Evening</button>
+<button type="button" class="seg" aria-pressed="{{ aP }}" onClick="{{ setAny }}">Any time</button>
+</div>
+</div>
+</div>
+
+<sc-if value="{{ anyGood }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 14px; align-items: flex-start; background: #E3F3E8; border: 1px solid #B9DFC6; border-radius: 12px; padding: 16px 20px">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="flex: 0 0 28px; fill: none; stroke: #1B6B3A; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="12" r="10"></circle><path d="M7.5 12.5l3 3 6-6.5"></path></svg>
+<div>
+<p style="margin: 0; font-size: 19px; font-weight: 600; color: #14202B">{{ head }}</p>
+<p style="margin: 6px 0 0; font-size: 15px; color: #14202B">{{ sub }}</p>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ noGood }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 14px; align-items: flex-start; background: #FDF1DC; border: 1px solid #F1D9A6; border-radius: 12px; padding: 16px 20px">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="flex: 0 0 28px; fill: none; stroke: #8A5300; stroke-width: 2; stroke-linecap: round"><circle cx="12" cy="12" r="10"></circle><path d="M7 12h10"></path></svg>
+<div>
+<p style="margin: 0; font-size: 19px; font-weight: 600; color: #14202B">{{ head }}</p>
+<p style="margin: 6px 0 0; font-size: 15px; color: #14202B">{{ sub }}</p>
+</div>
+</div>
+</sc-if>
+<p style="margin: -4px 0 0; font-size: 14px; color: #4A5663">{{ avoid }}</p>
+
+<ul aria-label="Score per day" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px">
+<sc-for list="{{ cards }}" as="c" hint-placeholder-count="6">
+<li style="flex: 1 1 170px; min-width: 0; box-sizing: border-box; border: 1px solid #DCE2E8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<p style="margin: 0; font-size: 15px; font-weight: 600">{{ c.day }}</p>
+<sc-if value="{{ c.good }}" hint-placeholder-val="{{ true }}">
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #E3F3E8; color: #1B6B3A; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{ c.band }}</span>
+</sc-if>
+<sc-if value="{{ c.ok }}" hint-placeholder-val="{{ false }}">
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #FDF1DC; color: #8A5300; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round"><path d="M6 12h12"></path></svg>{{ c.band }}</span>
+</sc-if>
+<sc-if value="{{ c.poor }}" hint-placeholder-val="{{ false }}">
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #FBE4E4; color: #A12A2A; font-size: 12px; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round"><path d="M7 7l10 10M17 7L7 17"></path></svg>{{ c.band }}</span>
+</sc-if>
+</div>
+<p style="margin: 0; font-size: 30px; font-weight: 600; line-height: 1.1">{{ c.score }}<span style="font-size: 14px; font-weight: 500; color: #4A5663"> / 100</span></p>
+<svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" style="width: 100%; height: 6px; display: block"><rect x="0" y="0" width="100" height="6" rx="3" style="fill: #E7ECF0"></rect><rect x="0" y="0" width="{{ c.score }}" height="6" rx="3" fill="{{ c.bar }}"></rect></svg>
+<p style="margin: 0; font-size: 13px">Best <strong>{{ c.window }}</strong></p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ c.chips }}" as="ch" hint-placeholder-count="3"><span class="chip">{{ ch.text }}</span></sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; color: #4A5663">{{ c.sentence }}</p>
+</li>
+</sc-for>
+</ul>
+
+<details style="border-top: 1px solid #E7ECF0; padding-top: 4px">
+<summary>How we score</summary>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; padding: 4px 0 8px">
+<div style="flex: 1 1 300px; font-size: 14px; line-height: 1.5">
+<p style="margin: 0">For someone who runs 30 to 90 minutes outdoors in Kos.</p>
+<p style="margin: 8px 0 0">Each hour starts at 100 and loses points for rain, wind, heat and humidity. The day's score is its best two hours in the time you chose.</p>
+<p style="margin: 8px 0 0">Good is 75 and up, OK 50 to 74, Poor under 50.</p>
+</div>
+<div style="flex: 2 1 460px; min-width: 0; overflow-x: auto">
+<table>
+<thead><tr><th scope="col">What</th><th scope="col">No points off</th><th scope="col">Points off</th></tr></thead>
+<tbody>
+<tr><th scope="row" style="font-weight: 500">Rain chance</th><td>up to 20%</td><td>0.8 per % up to 50%, then 1.2. Another 20 if it rains more than 0.5 mm.</td></tr>
+<tr><th scope="row" style="font-weight: 500">Wind</th><td>up to 15 km/h</td><td>1.5 per km/h up to 30, then 3</td></tr>
+<tr><th scope="row" style="font-weight: 500">Gusts</th><td>up to 40 km/h</td><td>1 per km/h above 40</td></tr>
+<tr><th scope="row" style="font-weight: 500">Temperature</th><td>8 to 16 °C</td><td>4 per °C above 16, 3 per °C below 8</td></tr>
+<tr><th scope="row" style="font-weight: 500">Humidity (dew point)</th><td>up to 12 °C</td><td>4 per °C up to 16, then 8</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</details>
+<p style="margin: 0; font-size: 12px; color: #4A5663">From the source's hourly forecast for Kos, issued 25 November 22:45. Today is left out because it is already dark. Next: use our corrected temperature where it wins, and sunrise and sunset for daylight.</p>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { win: 'any' };
+  }
+  data() {
+    if (!this._data) this._data = {"morning": {"cards": [{"day": "Thu 26", "long": "Thursday 26", "score": 100, "window": "07:00–09:00", "sentence": "No rain, light wind, 14 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Cool"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Fri 27", "long": "Friday 27", "score": 96, "window": "07:00–09:00", "sentence": "No rain, light wind, 17 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sat 28", "long": "Saturday 28", "score": 82, "window": "07:00–09:00", "sentence": "No rain, light wind, a little humid, 19 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "A little humid"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sun 29", "long": "Sunday 29", "score": 57, "window": "08:00–10:00", "sentence": "Rain likely (53%), light wind, humid, 17 °C.", "chips": [{"text": "Rain likely"}, {"text": "Light wind"}, {"text": "Humid"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Mon 30", "long": "Monday 30", "score": 44, "window": "08:00–10:00", "sentence": "Rain likely (68%), light wind, a little humid, 16 °C.", "chips": [{"text": "Rain likely"}, {"text": "Light wind"}, {"text": "A little humid"}, {"text": "Cool"}], "good": false, "ok": false, "poor": true, "band": "Poor", "bar": "#C24141"}, {"day": "Tue 1", "long": "Tuesday 1", "score": 72, "window": "07:00–09:00", "sentence": "No rain, breezy, 28 km/h, gusts to 49 km/h, 11 °C.", "chips": [{"text": "Dry"}, {"text": "Breezy"}, {"text": "Gusty"}, {"text": "Cool"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}], "head": "Best days to run: Thursday 26 and Friday 27.", "sub": "Thursday 26, 07:00–09:00: no rain, light wind, 14 °C.", "avoid": "Avoid: Monday 30. Rain likely (68%), light wind, a little humid, 16 °C.", "anyGood": true}, "midday": {"cards": [{"day": "Thu 26", "long": "Thursday 26", "score": 98, "window": "11:00–13:00", "sentence": "No rain, light wind, 16 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Fri 27", "long": "Friday 27", "score": 85, "window": "13:00–15:00", "sentence": "No rain, light wind, a little humid, 20 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "A little humid"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sat 28", "long": "Saturday 28", "score": 80, "window": "11:00–13:00", "sentence": "No rain, light wind, humid, 18 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Humid"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sun 29", "long": "Sunday 29", "score": 64, "window": "13:00–15:00", "sentence": "Rain possible (38%), light wind, humid, 19 °C.", "chips": [{"text": "Rain possible"}, {"text": "Light wind"}, {"text": "Humid"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Mon 30", "long": "Monday 30", "score": 65, "window": "11:00–13:00", "sentence": "Rain likely (59%), light wind, 17 °C.", "chips": [{"text": "Rain likely"}, {"text": "Light wind"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Tue 1", "long": "Tuesday 1", "score": 58, "window": "11:00–13:00", "sentence": "No rain, windy, 31 km/h, gusts to 59 km/h, 13 °C.", "chips": [{"text": "Dry"}, {"text": "Windy"}, {"text": "Gusty"}, {"text": "Cool"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}], "head": "Best days to run: Thursday 26 and Friday 27.", "sub": "Thursday 26, 11:00–13:00: no rain, light wind, 16 °C.", "avoid": "Weakest: Tuesday 1. No rain, windy, 31 km/h, gusts to 59 km/h, 13 °C.", "anyGood": true}, "evening": {"cards": [{"day": "Thu 26", "long": "Thursday 26", "score": 97, "window": "18:00–20:00", "sentence": "No rain, light wind, 17 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Fri 27", "long": "Friday 27", "score": 88, "window": "18:00–20:00", "sentence": "No rain, light wind, 19 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sat 28", "long": "Saturday 28", "score": 82, "window": "18:00–20:00", "sentence": "No rain, light wind, humid, 18 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Humid"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sun 29", "long": "Sunday 29", "score": 59, "window": "16:00–18:00", "sentence": "Rain possible (49%), breezy, 16 km/h, humid, 19 °C.", "chips": [{"text": "Rain possible"}, {"text": "Breezy"}, {"text": "Humid"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Mon 30", "long": "Monday 30", "score": 62, "window": "18:00–20:00", "sentence": "Rain possible (40%), breezy, 26 km/h, gusts to 47 km/h, 16 °C.", "chips": [{"text": "Rain possible"}, {"text": "Breezy"}, {"text": "Gusty"}, {"text": "Cool"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Tue 1", "long": "Tuesday 1", "score": 54, "window": "16:00–18:00", "sentence": "No rain, windy, 32 km/h, gusts to 58 km/h, 12 °C.", "chips": [{"text": "Dry"}, {"text": "Windy"}, {"text": "Gusty"}, {"text": "Cool"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}], "head": "Best days to run: Thursday 26 and Friday 27.", "sub": "Thursday 26, 18:00–20:00: no rain, light wind, 17 °C.", "avoid": "Weakest: Tuesday 1. No rain, windy, 32 km/h, gusts to 58 km/h, 12 °C.", "anyGood": true}, "any": {"cards": [{"day": "Thu 26", "long": "Thursday 26", "score": 100, "window": "07:00–09:00", "sentence": "No rain, light wind, 14 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Cool"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Fri 27", "long": "Friday 27", "score": 96, "window": "07:00–09:00", "sentence": "No rain, light wind, 17 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sat 28", "long": "Saturday 28", "score": 82, "window": "07:00–09:00", "sentence": "No rain, light wind, a little humid, 19 °C.", "chips": [{"text": "Dry"}, {"text": "Light wind"}, {"text": "A little humid"}, {"text": "Mild"}], "good": true, "ok": false, "poor": false, "band": "Good", "bar": "#2E8B57"}, {"day": "Sun 29", "long": "Sunday 29", "score": 64, "window": "13:00–15:00", "sentence": "Rain possible (38%), light wind, humid, 19 °C.", "chips": [{"text": "Rain possible"}, {"text": "Light wind"}, {"text": "Humid"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Mon 30", "long": "Monday 30", "score": 65, "window": "11:00–13:00", "sentence": "Rain likely (59%), light wind, 17 °C.", "chips": [{"text": "Rain likely"}, {"text": "Light wind"}, {"text": "Mild"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}, {"day": "Tue 1", "long": "Tuesday 1", "score": 72, "window": "07:00–09:00", "sentence": "No rain, breezy, 28 km/h, gusts to 49 km/h, 11 °C.", "chips": [{"text": "Dry"}, {"text": "Breezy"}, {"text": "Gusty"}, {"text": "Cool"}], "good": false, "ok": true, "poor": false, "band": "OK", "bar": "#B57A0C"}], "head": "Best days to run: Thursday 26 and Friday 27.", "sub": "Thursday 26, 07:00–09:00: no rain, light wind, 14 °C.", "avoid": "Weakest: Sunday 29. Rain possible (38%), light wind, humid, 19 °C.", "anyGood": true}};
+    return this._data;
+  }
+  renderVals() {
+    const w = this.state.win;
+    const d = this.data()[w];
+    const set = (v) => () => this.setState({ win: v });
+    return {
+      cards: d.cards, head: d.head, sub: d.sub, avoid: d.avoid, anyGood: d.anyGood, noGood: !d.anyGood,
+      mP: w === 'morning' ? 'true' : 'false', dP: w === 'midday' ? 'true' : 'false', eP: w === 'evening' ? 'true' : 'false', aP: w === 'any' ? 'true' : 'false',
+      setMorning: set('morning'), setMidday: set('midday'), setEvening: set('evening'), setAny: set('any'),
+    };
+  }
+}
+</script>
+</body>
+</html>

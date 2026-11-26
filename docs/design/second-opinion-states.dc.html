@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Weather Quick · Second opinion tile states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.eyebrow{margin:0;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#4A5663}
+</style>
+</helmet>
+<div style="width: 1280px; height: 300px; box-sizing: border-box; padding: 32px; background: #F3F5F7; color: #14202B; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: flex; gap: 20px; align-items: stretch">
+
+<div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 8px">
+<p class="eyebrow">Ours wins</p>
+<div style="flex: 1; box-sizing: border-box; background: #EAF1F8; border: 1px solid #C5D7EA; border-radius: 12px; padding: 16px 18px">
+<p style="margin: 0; font-size: 13px; color: #4A5663">Second opinion</p>
+<p style="margin: 10px 0 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="padding: 3px 11px; border-radius: 999px; background: #0B6FD6; color: #FFFFFF; font-size: 13px; font-weight: 600">Ours</span><span style="font-size: 16px; font-weight: 600">0.4 °C closer, 1 day ahead</span></p>
+<p style="margin: 10px 0 0; font-size: 13px; color: #4A5663">Daily max, over 56 days of backtest. For the min the source wins, so we show the source.</p>
+</div>
+</div>
+
+<div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 8px">
+<p class="eyebrow">The source wins</p>
+<div style="flex: 1; box-sizing: border-box; background: #FFFFFF; border: 1px solid #DCE2E8; border-radius: 12px; padding: 16px 18px">
+<p style="margin: 0; font-size: 13px; color: #4A5663">Second opinion</p>
+<p style="margin: 10px 0 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="padding: 2px 10px; border-radius: 999px; border: 1px solid #5C6670; color: #14202B; font-size: 13px; font-weight: 600">Source</span><span style="font-size: 16px; font-weight: 600">The source wins</span></p>
+<p style="margin: 10px 0 0; font-size: 13px; color: #4A5663">Ours was not 0.1 °C better at any lead, so the forecast is shown as the source gives it.</p>
+</div>
+</div>
+
+<div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 8px">
+<p class="eyebrow">Data missing</p>
+<div style="flex: 1; box-sizing: border-box; background: #FFFFFF; border: 1px solid #DCE2E8; border-radius: 12px; padding: 16px 18px">
+<p style="margin: 0; font-size: 13px; color: #4A5663">Second opinion</p>
+<p style="margin: 10px 0 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="padding: 2px 10px; border-radius: 999px; border: 1px dashed #5C6670; color: #14202B; font-size: 13px; font-weight: 600">Unavailable</span><span style="font-size: 16px; font-weight: 600">Not available now</span></p>
+<p style="margin: 10px 0 0; font-size: 13px; color: #4A5663">Previous Runs answered "Daily API request limit exceeded". The source is shown alone.</p>
+</div>
+</div>
+
+<div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 8px">
+<p class="eyebrow">Too few days</p>
+<div style="flex: 1; box-sizing: border-box; background: #FFFFFF; border: 1px solid #DCE2E8; border-radius: 12px; padding: 16px 18px">
+<p style="margin: 0; font-size: 13px; color: #4A5663">Second opinion</p>
+<p style="margin: 10px 0 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="padding: 2px 10px; border-radius: 999px; border: 1px dashed #5C6670; color: #14202B; font-size: 13px; font-weight: 600">Waiting</span><span style="font-size: 16px; font-weight: 600">Too few days to judge</span></p>
+<p style="margin: 10px 0 0; font-size: 13px; color: #4A5663">The backtest has 6 days at 1 day ahead and needs 10. The source is shown until then.</p>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
