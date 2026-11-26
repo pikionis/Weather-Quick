@@ -1,0 +1,23 @@
+name: ZAP baseline (live site)
+
+# A passive scan of the live site: ZAP crawls it (also with a browser, -j, since the page is built by
+# JavaScript) and inspects the responses. It sends no attacks. Run by hand only; the reports stay as the
+# run's artifact, and the findings are written into NOTES.md.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: https://weather-quick-rho.vercel.app
+          cmd_options: -j
+          allow_issue_writing: false
+          artifact_name: zap-baseline
