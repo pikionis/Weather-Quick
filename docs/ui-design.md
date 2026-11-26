@@ -1,55 +1,59 @@
 # UI design
 
-Status: approved by Petros on 2026-11-26 as good enough to build. Mockup: https://claude.ai/artifact/RTfTBPYEAEwehKEqQ8jzdq (desktop and mobile; private to the owner).
-
-The ASCII wireframes in [architecture.md](architecture.md#5-wireframes) give the layout. This file gives the details steps 4 and 6 build from. Copy is in English.
+Status: dashboard v2, from Petros's mockup of 2026-11-26 (https://claude.ai/artifact/N3Z5jX8NQbgzbdG6W6LYxz, private to the owner), with the live scene and the instrument added at his request. It replaces the card mockup and the instrument page, which had no menu and no options per box. Copy is in English.
 
 ## Layout
 
-| Region | Desktop (≥ 900 px) | Mobile |
+| Region | Laptop (900 px and up) | Phone |
 | --- | --- | --- |
-| Header | Title, "Kos, South Aegean, Greece · 36.89° N, 27.29° E" on the left; "Updated HH:MM local · refreshes every 10 min" on the right | Same, stacked |
-| Now | Left card, max 380 px wide | First card, full width |
-| Badge | Bottom of the Now card | Same |
-| Next 7 days | Right card, takes the rest | Second card |
-| Past 4 weeks | Full-width card below | Third card |
-| Footer | Credit left, "Times in Europe/Athens" right | Stacked |
+| Menu | Dark column on the left, 260 px; folds to a 64 px rail | A drawer from the left, opened by "Menu"; Esc or the backdrop closes it |
+| Header | "Kos town · Wednesday 25 November, 22:45 local", the dashboard's title, and the status: Live, the Kos clock, "updated · next in m:ss" | Same, stacked |
+| Boxes | White cards, 12 px radius, 20 px gaps; some rows hold two boxes (2:1) | One column |
 
-Container max width 1200 px, padding 32 px 40 px on desktop, 16 px on mobile, 20 px gap between cards. The two top cards sit in a wrapping flex row, so they stack without a media query.
+## The menu
 
-## Content per region
+- **Place:** Kos town, South Aegean, Greece, coordinates and time zone.
+- **Dashboards:** Overview and Instrument. The choice is in the URL (`?dashboard=instrument`).
+- **Views:** links to the boxes of the current dashboard; the box in view is marked.
+- **Layers:** temperature, dew point, wind, gusts, rain. They choose what the live scene and the charts draw. Defaults as in the mockup: dew point and gusts off.
+- **Second opinion:** Source, Corrected and 80% band. Disabled, with a note, until the backtest (steps 5 and 6).
 
-- **Now:** temperature (64 px), "Clear sky · feels like X °C" (WMO code to text), then a 2×2 grid: wind (km/h and compass), gusts, dew point, precipitation.
-- **Badge:** title "Second opinion · last 21 days". One line per variable. The pill is "Ours" (filled blue) when the correction wins and "Source" (outlined) when it doesn't. Text: "Max temp: our correction was 0.8 °C closer to the truth (MAE 1.1 vs 1.9 °C, 18 days)." / "Min temp: the source wins (MAE 1.0 vs 1.1 °C), so we show it unchanged." If the second opinion failed: "Second opinion unavailable: <reason>".
-- **Next 7 days:**
-  - Three toggle buttons, Source, Corrected and 80% band, all on by default, with `aria-pressed`.
-  - Chart: daily max and min. Corrected is solid blue at 3 px with dots on the max. Source is dashed grey at 2 px. The band is blue at 14% opacity.
-  - Legend under the chart: "80% band: 8 in 10 past errors fell inside".
-  - Table columns: Day, Sky, Source max, Ours max, 80% range, Gap, Min, Rain. It scrolls sideways under 520 px.
-- **Past 4 weeks:** a temperature chart with the max line (orange) and the min line (blue); under it a rain chart with light-blue bars, its own mm axis and the same dates. One summary line: wettest and warmest day.
-- **Footer:** "Weather data by Open-Meteo.com" (link) · "licensed CC BY 4.0" (link) · "truth for the backtest: ERA5 via Open-Meteo".
+## Overview, box by box
 
-## Tokens
+1. **Live over Kos** (the main box, added to the mockup):
+   - The coastline around Kos on a tilted plane, with wind particles that move as fast as the wind and where it blows.
+   - Rain that falls as hard as that hour's mm/h: light up to 2.5, moderate up to 7.6, heavy above.
+   - Land tinted by the air temperature.
+   - A timeline from the past 28 days to the next 7, with Play and Now.
+   - Under it, Wind, Rain or Temperature day by day, past and forecast. Clicking a day moves the scene to its noon.
+2. **Right now:**
+   - Now: temperature, sky, feels like, and a min-to-max bar for today.
+   - Wind: speed, 16-point direction, gusts, and a vane whose streaks run with the wind.
+   - Dew point, and Rain (mm, plus the highest chance in the next 48 hours).
+   - Second opinion tile: placeholder until step 6.
+3. **Next 48 hours:** hourly charts by layer (temperature and dew point, wind and gusts, rain chance) on one time axis, with synced tooltips. **Track record** beside it: placeholder until step 6.
+4. **Next 7 days:** Max/Min switch; the source's chart and a table (Day, Sky, Source, Ours, 80% range, Gap, Rain, Wind). The Ours, 80% range and Gap columns show "—" until step 6.
+5. **Past 28 days:** max and min, rain per day, wind and gusts, by layer, on one date axis. **28 days in numbers** beside it: warmest day, coolest night, wettest day, total rain with days of 1 mm or more, strongest gust.
+6. **About the data:** sources (with the live grid cell), method, limits.
+
+The **Instrument** dashboard keeps the instrument: the reading, the hourly trace with a time cursor, day columns, and the past 4 weeks as range bars.
+
+## Colours
 
 | Token | Value | Use |
 | --- | --- | --- |
-| bg | `#F3F5F7` | page |
-| surface | `#FFFFFF`, border `#DCE2E8`, radius 12 px | cards |
-| ink | `#14202B` | text |
-| muted | `#4A5663` | labels, axes (passes 4.5:1 on white) |
-| corrected | `#1F5FA0` | our series, links, Ours pill |
-| source | `#5C6670`, dash `6 5` | source series |
-| max | `#B4501A` | past max line |
-| rain | `#9DB8D3` | rain bars |
-| badge | bg `#EAF1F8`, border `#C5D7EA` | second-opinion box |
-| fonts | system fonts (`system-ui`): 600 for title and big numbers, 400/500 for the rest | |
+| bg / card / border | `#F3F5F7` / `#FFFFFF` / `#DCE2E8` | page, boxes |
+| ink / muted | `#14202B` / `#4A5663` | text |
+| menu | `#14202B`, `#1D2C3A`, `#2A3E51`; text `#EEF2F6`, `#AEBBC8` | the dark menu |
+| temperature / minimum | `#B4501A` / `#2E6DB4` | lines |
+| dew point / wind | `#6A4C9C` / `#1B7A72` | lines; gusts dashed |
+| rain | `#5F8DB8` | bars (the mockup's `#7FA6CC` is 2.6:1 on white; this is 3.5:1) |
+| source | `#5C6670` | the source line |
+| live | `#2E8B57` | the Live light |
 
-Buttons are at least 44 px tall. Selected: ink background with white text. Off: white background with a `#8C97A3` border.
-
-## Changes from the mockup
-
-Decided in architecture.md section 6: rain has its own chart, the fonts are the system's, and the charts use Recharts 3.10.1. The mockup draws plain SVG only to show the look.
+Pairs that share a chart pass the `dataviz` validator: temperature and dew point (ΔE 22.6), maximum and minimum (ΔE 26.6). Fonts: the system's.
 
 ## Not decided here
 
-- The numbers in the mockup's corrected series, band and badge are illustrative until step 5.
+- The look of the second opinion (step 6): the corrected line's colour must stand apart from the source and pass the validator.
+- More variables (cloud cover, pressure, humidity, waves) and a wider map need new data; see `NOTES.md`.

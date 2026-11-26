@@ -12,6 +12,8 @@ The base of the brief: for Kos, show the weather now, the past 28 days and the n
 - `src/components/**`
 - `src/lib/forecastClient.ts` and its test: builds the Forecast API URL, fetches it, returns `ForecastResponse` or `ApiError`.
 - `src/lib/days.ts`, `src/lib/weatherCode.ts`, `src/lib/refresh.ts`, each with a test: split the daily series into the past 28 days and the next 7 by local date; WMO weather code to text, from the table in the Open-Meteo docs; what the first load and each refresh ask for.
+- `scripts/kos-map.mjs` and the `src/components/kosMap.ts` it builds: the coastline around Kos from Natural Earth (public domain), bundled; the page never fetches map data.
+- `src/lib/hours.ts` with a test: the hourly rows, the trace window (last 24 hours and the next 7 days), where each day starts, and the time cursor (pointer and keys).
 
 Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types: change only with Petros's OK), `src/lib/fixtures/**`.
 
@@ -22,7 +24,7 @@ Read only: `src/lib/openMeteo.ts`, `src/lib/location.ts` (shared types: change o
 - Error state shows the API `reason`. Loading and empty states too.
 - Footer: "Weather data by Open-Meteo.com" with a link (already in App).
 - One chart library: Recharts 3.10.1, exact version, loaded lazily. The lockfile may only add Recharts and its dependencies; if anything else is removed, stop before committing.
-- Past 28 days: a temperature chart (max and min) and under it a rain chart with its own mm axis, on the same dates. System fonts. The rest of the look is in `docs/ui-design.md`.
+- Layout and boxes: `docs/ui-design.md` (dashboard v2), with the live scene first and the instrument as a second dashboard. System fonts. Everything comes from the data we already fetch: no new library, no new API.
 - No second opinion here. Leave a slot in the 7-day view where the corrected forecast will go.
 
 ## Pull request
