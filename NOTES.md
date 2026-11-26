@@ -50,16 +50,35 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **ERA5 ends in `null`.** In the new fixture the last 142 hours of every field are `null`, from 20 November 02:00: the last full day is 19 November, and 20 November has 2 hours. A day counts only with all 24. The shared type allows `null` for ERA5 only, the one response that sends it.
 - **The clock change is inside the 90 days.** Both APIs answer with one fixed +2 h, and 25 October has 24 distinct hours, so forecast and truth stay aligned. Before that date a "local day" runs from 01:00 to 01:00 summer time.
 
+## Step 4: UI base (2026-11-26)
+
+- **Follows the approved mockup** (`docs/ui-design.md`): header, Now card, Next 7 days card, Past 4 weeks card and footer, with its tokens and copy. Two approved changes: rain has its own chart with a mm axis, on the same dates as the temperature chart (hovering one shows the same day in both), and system fonts.
+- **Weather text** comes from the WMO table in the Open-Meteo docs ("Mainly clear", "Moderate rain showers"), not from the mockup's shorter labels ("Mostly clear", "Showers"), so nothing is invented.
+- **Refresh:** every 10 minutes while the tab is visible, checked once a minute. A hidden tab makes no requests and refreshes when it comes back. The history comes with the first load and again with the first refresh after local midnight, so yesterday joins it; other refreshes ask for the 7 days only (weight 2.2).
+- **States:** loading; error with the API's `reason` and a retry button; no days; a failed refresh keeps the last data and says so next to the update time.
+- **Weight:** the first load is 73 KB gzip. Recharts and the two charts load after it: 106 KB + 8 KB gzip. Recharts 3.10.1 with the parts we use is lighter than the 137 KB measured on 3.11.1 with more components.
+- **Accessibility:** the past 28 days also open as a table; charts skip their animation under `prefers-reduced-motion`; every value shows its unit, taken from the API's `*_units`.
+- **Dev only:** `?fixture` shows the Kos sample and `?fixture=error` the error state. The build leaves both out (checked in `dist/`).
+- **Components differ from `docs/architecture.md` section 4:** `PastWeeks` holds the past card and lazy-loads `HistoryChart`; `ForecastView` lazy-loads `ForecastChart`; `useForecast` holds the requests and the timer instead of `App`; `Swatches` draws the legend marks. `SeriesToggles` and `TrackRecordBadge` come in step 6. The document gets updated in step 7.
+- **Checked in a browser** (headless Chrome, 2026-11-26): fixture and live at 1280 px; fixture at 390 px, where nothing scrolls sideways except the 7-day table inside its box, as designed; the error state.
+
 ## Dependencies
 
 - Vite + React + TypeScript from the official `react-ts` template (it lints with oxlint).
 - `vitest` added as the test runner: the unit-test rule needs one, and it is Vite's own.
 - **Recharts 3.10.1**, exact version, approved on 2026-11-26 as the one chart library. It is installed in the step 4 PR, not before. Why: JSX that is easy to change live in the review call, SVG, and a ready range area for the step 6 band. Cost: it is the heaviest of the four measured (gzip over React: Recharts 137 KB, Observable Plot 95 KB, Chart.js 65 KB, uPlot 23 KB; Recharts measured on 3.11.1), so it loads lazily. 3.10.1 because 3.11.1 was three days old.
-- **Lockfile rule for that install:** it may only add Recharts and its dependencies. On Windows, `npm install` had removed the `@emnapi` entries in two old worktrees, which could break `npm ci` elsewhere. If anything else disappears, we stop before committing.
+- **Lockfile rule for that install:** it may only add Recharts and its dependencies. On Windows, `npm install` had removed the `@emnapi` entries in two old worktrees, which could break `npm ci` elsewhere. If anything else disappears, we stop before committing. It happened in step 4: see Rough edges.
 
 ## Rough edges
 
 - On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP on 2026-11-25. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page must then show the source alone and say why.
+- **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
+- **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
+- **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
+- **Source and corrected colours fail a check** of the `dataviz` palette validator: the source grey `#5C6670` and the corrected blue `#1F5FA0` differ by ΔE 10.6 for normal vision, below 15. The dash helps; step 6 should pick a clearer pair or label the lines directly.
+- **The Now card has empty space** under its four values until step 6 adds the badge.
+- **On a phone** the 7-day chart drops some day labels (Recharts hides ticks that would overlap), and the 7-day table scrolls sideways.
+- **The 10-minute refresh was not watched in a browser.** The rule and the timing are unit-tested, and the refresh request was checked live (HTTP 200, 7 days).
 
 ## Data licence
 
