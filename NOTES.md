@@ -12,6 +12,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 ## How we work
 
 - **One window, one step at a time.** I started with two parallel windows and moved to one, because only steps 4 and 5 could run in parallel. The two windows (worktrees, double setup, coordination) cost more time than they saved. With one agent and one step per PR, in order, it is easier for me to follow and check the work.
+- **Step 5 began twice.** A Claude Code project thread opened PR #7 while this window was still writing its plan. This window did not start over. It fetched the Previous Runs sample itself (no value differs from the fixture) and recomputed the backtest table with a script written without reading the code (the same numbers). Then it added its commits to the same branch.
 
 ## Assumptions
 
@@ -30,6 +31,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Dropping `hourly` from the base Forecast call** (proposed by the AI before step 4: 44 KB to 2.6 KB, request weight 5.5 to 3.75). Chosen instead: keep it. Why: the contract is already merged, and the change would touch the brief, the type, the fixture and the tests for no visible gain. If nothing uses `hourly` after step 6, it goes then. (The instrument now uses it.)
 - **Decision rule without a margin** (the first draft of `docs/architecture.md`: the correction wins whenever its MAE is lower). Chosen instead: it wins only if it is at least 0.1 °C better. Why: otherwise the badge can say "0.0 °C better".
 - **80% band from the corrected errors only** (same draft). Chosen instead: from the errors of the line we show, the source's when the source wins. Why: the band has to describe the line on screen.
+- **The 80% band as percentiles of shown − truth, flipped into a range** (the first step 5 code, PR #7). Chosen instead: percentiles of truth − shown, added to the shown value. Why: built the first way, the band is easy to add with the wrong sign, and then it comes out mirrored whenever the errors lean one way. Tested with lopsided errors.
 - **Rain bars inside the temperature chart, without an axis** (the mockup in `docs/ui-design.md`). Chosen instead: a rain chart of its own under the temperature, with a mm axis and the same dates. Why: every value shows its unit.
 - **Space Grotesk and Inter** (the mockup). Chosen instead: system fonts. Why: nothing to load and no third-party request.
 - **The first UI, built from the mockup** (cards and stock charts, proposed by the AI). Chosen instead: the instrument in `docs/PRODUCT.md`. Why: too basic and too static for a page that should feel live.
@@ -51,6 +53,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **About 35 days of history cannot feed the backtest.** With a 21-day bias window and the real ERA5 lag they leave 1 backtest day at lead 1 and none after it, under our own n ≥ 10 rule. 90 days leave 50 to 56. Decided: 90 days.
 - **ERA5 ends in `null`.** In the new fixture the last 142 hours of every field are `null`, from 20 November 02:00: the last full day is 19 November, and 20 November has 2 hours. A day counts only with all 24. The shared type allows `null` for ERA5 only, the one response that sends it.
 - **The clock change is inside the 90 days.** Both APIs answer with one fixed +2 h, and 25 October has 24 distinct hours, so forecast and truth stay aligned. Before that date a "local day" runs from 01:00 to 01:00 summer time.
+- **The Forecast API's daily max and min are not the max and min of its hours.** On the forecast fixture they differ on 9 of 35 days. The daily max is 0 to 0.4 °C higher and the daily min 0 to 0.6 °C lower, never the other way. The bias is measured on hours (Previous Runs and ERA5 are hourly), so the correction applies to the hourly forecast, aggregated the same way (`sourceDays`). The Forecast API's past hours equal Previous Runs' `temperature_2m` in 690 of 696 shared hours (worst 0.3 °C), so both serve the same best_match series.
 
 ## Step 4: dashboard v2 (2026-11-26)
 
@@ -78,35 +81,72 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 
 - **New Previous Runs fixture.** The old one (15 days, lead days 1, 3 and 7) gave no backtest day at all. `kos-previous-runs.json` now holds the same 90 days as ERA5, 28 August to 25 November, lead days 1 to 7, default model (best_match), fetched from the cloud session on 2026-11-26 with:
   `previous-runs-api.open-meteo.com/v1/forecast?latitude=36.893&longitude=27.288&hourly=temperature_2m,temperature_2m_previous_day1,...,temperature_2m_previous_day7&timezone=Europe/Athens&start_date=2026-08-28&end_date=2026-11-25`
-  2,160 hours per column, no `null`, cell 36.875 N, 27.324 E, one fixed +2 h offset. On the 15 days they share, lead days 1, 3 and 7 equal the old fixture to the decimal. The request weighs 5.1 calls.
-- **Code.** `src/lib/correction/`: `align` (hourly to daily max and min by local date, a day only with all 24 hours), `bias` (mean error of the latest 21 days known on D − L − 7), `backtest` (replays every date with a full window, then MAE, winner, band and today's bias per variable and lead), `metrics` (MAE, percentile, the 0.1 °C / 10-day rule, band), `dates`. Clients: `previousRunsClient.ts`, `era5Client.ts` (`models=era5`), both on a shared `fetchJson.ts` with the same never-throw contract as `fetchForecast`.
-- **No look-ahead, tested.** On the fixtures, for lead days 1, 4 and 7, moving every ERA5 hour after D − L − 7 by +10 °C leaves the bias for D identical; moving D − L − 7 itself changes it, so the test can fail.
-- **Band.** The 10th and 90th percentile of the errors (shown − truth) of the line we show: ours where ours wins, the source's where it wins. The range for the truth is shown − p90 to shown − p10. Hidden under 10 days.
+  2,160 hours per column, no `null`, cell 36.875 N, 27.324 E, one fixed +2 h offset. On the 15 days they share, lead days 1, 3 and 7 equal the old fixture to the decimal. The request weighs 5.1 calls. The same request with `models=best_match`, sent from this machine the same day, returned the same values in all 8 columns.
+- **Code** in `src/lib/correction/`:
+  - `align`: hourly to daily max and min by local date, a day only with all 24 hours.
+  - `bias`: mean error of the latest 21 days known on D − L − 7; `null` with fewer, never a mean of fewer.
+  - `backtest`: replays every date with a full window, then MAE, winner, band and today's bias per variable and lead.
+  - `metrics`: MAE, percentile, the 0.1 °C / 10-day rule, band.
+  - `forecast`: today's second opinion for each forecast day and variable: the source, today's bias, the line we show, our value, the gap and the 80% range. Step 6 only displays it.
+  - `dates`.
+  - Clients: `previousRunsClient.ts` and `era5Client.ts` (`models=era5`), both on a shared `fetchJson.ts` with the same never-throw contract as `fetchForecast`.
+- **No look-ahead, tested.** On the fixtures, for lead days 1, 4 and 7, moving every ERA5 hour after D − L − 7 by +10 °C leaves the bias for D identical. Moving D − L − 7 itself changes it, so the test can fail.
+- **Band.** The 10th and 90th percentile of truth − shown, for the line we show: ours where ours wins, the source's where it wins. The range is shown + p10 to shown + p90. Hidden under 10 days. A test with lopsided errors checks that it does not come out mirrored.
+- **Today has no correction.** Our lead days start tomorrow, so `forecast` leaves today as the source gives it.
+- **The four states of the Now tile** can be read from the same results:
+  - ours wins: `winner` is `ours` at a lead;
+  - the source wins: no lead won;
+  - too few days: `n` under 10, so no band and the source;
+  - data missing: no results, so `opinionFor` gives the source alone.
 
 ### Backtest on the fixtures (today = 25 November)
 
-Errors are forecast − ERA5, °C. Ours wins only with an MAE at least 0.1 °C lower over at least 10 days.
+How to read the table:
+- **MAE:** the mean of |forecast − ERA5|, in °C. Ours wins only with an MAE at least 0.1 °C lower over at least 10 days.
+- **Band:** truth − shown, for the line we show. On 8 of 10 backtest days the truth fell between shown + low and shown + high.
+- **Today's bias:** forecast − ERA5, the mean of the 21 days up to 18 November. Ours subtracts it where ours is shown.
 
-| Variable | Lead | Days | MAE source | MAE ours | Winner | 80% band of errors | Bias subtracted today |
+| Variable | Lead | Days | MAE source | MAE ours | Winner | 80% band (truth − shown) | Today's bias |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| max | 1 | 56 | 1.26 | 1.23 | source | −0.25 to 2.45 | 0.51 |
-| max | 2 | 55 | 1.21 | 1.26 | source | −0.20 to 2.72 | 0.42 |
-| max | 3 | 54 | 1.28 | 1.41 | source | −0.27 to 2.94 | 0.39 |
-| max | 4 | 53 | 1.29 | 1.55 | source | −0.28 to 2.98 | 0.27 |
-| max | 5 | 52 | 1.41 | 2.04 | source | −0.29 to 3.08 | 0.29 |
-| max | 6 | 51 | 1.47 | 2.20 | source | −0.50 to 2.90 | 0.19 |
-| max | 7 | 50 | 1.42 | 1.79 | source | −0.04 to 3.01 | 0.27 |
-| min | 1 | 56 | 0.94 | 0.86 | source | −1.95 to 0.40 | −0.62 |
-| min | 2 | 55 | 0.98 | 0.83 | ours | −1.81 to 1.21 | −0.73 |
-| min | 3 | 54 | 1.01 | 0.85 | ours | −1.37 to 1.24 | −0.75 |
-| min | 4 | 53 | 1.10 | 0.98 | ours | −1.88 to 1.23 | −0.87 |
-| min | 5 | 52 | 2.13 | 1.35 | ours | −1.76 to 2.62 | −2.09 |
-| min | 6 | 51 | 2.23 | 1.41 | ours | −2.44 to 1.96 | −2.39 |
-| min | 7 | 50 | 1.33 | 1.37 | source | −2.44 to 0.80 | −1.49 |
+| max | 1 | 56 | 1.26 | 1.23 | source | −2.45 to 0.25 | 0.51 |
+| max | 2 | 55 | 1.21 | 1.26 | source | −2.72 to 0.20 | 0.42 |
+| max | 3 | 54 | 1.28 | 1.41 | source | −2.94 to 0.27 | 0.39 |
+| max | 4 | 53 | 1.29 | 1.55 | source | −2.98 to 0.28 | 0.27 |
+| max | 5 | 52 | 1.41 | 2.04 | source | −3.08 to 0.29 | 0.29 |
+| max | 6 | 51 | 1.47 | 2.20 | source | −2.90 to 0.50 | 0.19 |
+| max | 7 | 50 | 1.42 | 1.79 | source | −3.01 to 0.04 | 0.27 |
+| min | 1 | 56 | 0.94 | 0.86 | source | −0.40 to 1.95 | −0.62 |
+| min | 2 | 55 | 0.98 | 0.83 | ours | −1.21 to 1.81 | −0.73 |
+| min | 3 | 54 | 1.01 | 0.85 | ours | −1.24 to 1.37 | −0.75 |
+| min | 4 | 53 | 1.10 | 0.98 | ours | −1.23 to 1.88 | −0.87 |
+| min | 5 | 52 | 2.13 | 1.35 | ours | −2.62 to 1.76 | −2.09 |
+| min | 6 | 51 | 2.23 | 1.41 | ours | −1.96 to 2.44 | −2.39 |
+| min | 7 | 50 | 1.33 | 1.37 | source | −0.80 to 2.44 | −1.49 |
 
-- **The source wins the daily max at every lead day.** Its error is mostly warm (the band leans positive), but it moves with the season, so a 21-day mean subtracted a week or more later overshoots, more so at longer leads.
-- **Ours wins the daily min at lead days 2 to 6**, by 0.12 to 0.82 °C. At lead 1 the gain is 0.08 °C, under the 0.1 rule, so the source stays. At lead 7 the source wins.
+- **The source wins the daily max at every lead day.**
+  - It runs warm: the mean error is +1.0 to +1.2 °C.
+  - But that warm error fell week by week, from +4 to +7 °C in late August and early September to about 0 in November.
+  - The bias window ends 8 to 14 days before the day it corrects. So it subtracts last month's error and overshoots, more at longer leads.
+  - One likely cause is the truth: the ERA5 cell is mostly sea, which keeps the summer maximum down. Not tested.
+- **Ours wins the daily min at lead days 2 to 6**, by 0.12 to 0.82 °C.
+  - The source's min at lead days 5 and 6 runs about 2 °C cold in almost every week: a mean of −1.9 and −2.1 °C, against −0.8 at the other leads. That is a repeating error, which is what the correction is for. We have not checked why these two leads differ.
+  - At lead 1 the gain is 0.08 °C, under the 0.1 rule, so the source stays. At lead 7 the source wins.
 - **The page will say so**: for the max, "the source wins" at every lead; for the min, our correction at 2 to 6 days ahead.
+- **Checked twice.** A separate script, written without reading `src/lib/correction`, gave the same n, MAE, winner, band and today's bias in every row.
+
+### Today's second opinion on the fixtures (25 November)
+
+This is what step 6 will show in Next 7 days, from `correctedForecast` with the hourly source. Values are in °C, and the gap is ours − source. The source here is the hourly max and min, so a few values differ from the daily fields in `docs/design/`: Sat 28 min 18.0, not 17.6; Mon 30 min 13.5, not 13.2; Tue 1 13.8 and 9.2, not 13.9 and 9.0.
+
+| Day | Max source | Max ours | Max 80% range | Max gap | Min source | Min ours | Min 80% range | Min gap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Today | 16.1 | no correction | — | — | 12.5 | no correction | — | — |
+| Thu 26 | 17.8 | = source | 15.4 to 18.1 | 0.0 | 13.4 | = source | 13.0 to 15.3 | 0.0 |
+| Fri 27 | 19.8 | = source | 17.1 to 20.0 | 0.0 | 14.9 | 15.6 | 14.4 to 17.4 | +0.7 |
+| Sat 28 | 18.9 | = source | 16.0 to 19.2 | 0.0 | 18.0 | 18.7 | 17.5 to 20.1 | +0.7 |
+| Sun 29 | 19.2 | = source | 16.2 to 19.5 | 0.0 | 16.8 | 17.7 | 16.4 to 19.5 | +0.9 |
+| Mon 30 | 17.9 | = source | 14.8 to 18.2 | 0.0 | 13.5 | 15.6 | 13.0 to 17.3 | +2.1 |
+| Tue 1 | 13.8 | = source | 10.9 to 14.3 | 0.0 | 9.2 | 11.6 | 9.6 to 14.0 | +2.4 |
 
 ## Designs for the second opinion and the runner verdict (2026-11-26)
 
@@ -120,6 +160,29 @@ Errors are forecast − ERA5, °C. Ours wins only with an MAE at least 0.1 °C l
 - **Before the deploy:** gitleaks over the whole history (39 commits) and the working tree found no leaks; `npm audit` found 0 vulnerabilities. trivy is not installed here, so `npm audit` stood in for it.
 - **After the deploy:** the page and its script answer 200 without login, with the same build hash as locally. The Linux build installed 90 packages from our lockfile and built in 7 s, so the restored `@emnapi` entries work there too. Every control was clicked on the live site with live data, with no console errors.
 
+## Security check of the live site (2026-11-26)
+
+- **Headers.** The page, a script and a 404 all send the same set (`curl -I`):
+  - `Content-Security-Policy`:
+    - `default-src 'self'`, with scripts and styles from self only;
+    - `connect-src` is self plus the three Open-Meteo hosts;
+    - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` and `frame-ancestors 'none'`.
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (Vercel's). Plain HTTP answers 308 to HTTPS.
+  - `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`.
+  - `Permissions-Policy`, with camera, microphone, geolocation, payment and USB off.
+  - `Access-Control-Allow-Origin: *` comes from Vercel on static files. It stays, because the files are public anyway.
+- **CSP in a real browser.** Headless Chrome ran on the live site, listening for `securitypolicyviolation`, the browser's security log and blocked requests.
+  - It covered both dashboards and the phone width, clicked every visible button (22) and hovered every chart (20).
+  - Result: 0 violations, 0 blocked requests and no console errors.
+  - A positive control at the end, a `fetch` to example.com (not allowed), was caught by both listeners. So the check can fail.
+- **ZAP baseline.** The workflow is `.github/workflows/zap-baseline.yml`:
+  - run by hand only (`workflow_dispatch`);
+  - `zaproxy/action-baseline` pinned to the v0.15.0 commit, with ZAP's `stable` image;
+  - `permissions: contents: read` and `allow_issue_writing: false`;
+  - browser crawl on (`-j`), and the reports kept as the run's artifact.
+
+  ZAP itself is not installed on this machine (no Java, no Docker). **Not run yet:** GitHub starts a `workflow_dispatch` workflow only when the file is on the default branch. `gh workflow run` answered 404, "not found on the default branch".
+
 ## Dependencies
 
 - Vite + React + TypeScript from the official `react-ts` template (it lints with oxlint).
@@ -132,7 +195,11 @@ Errors are forecast − ERA5, °C. Ours wins only with an MAE at least 0.1 °C l
 - On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP on 2026-11-25. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page must then show the source alone and say why.
 - **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
-- **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26): CSP (self, plus the three Open-Meteo API hosts), nosniff, `X-Frame-Options: DENY`, Referrer-Policy and Permissions-Policy. The ZAP baseline afterwards shows no Medium or Low finding except Vercel's `Access-Control-Allow-Origin: *` on static files, which stays: the files are public anyway.
+- **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26). "Security check of the live site" lists them and how they were checked. The ZAP scan waits for its workflow to reach `main`.
+- **`fetchJson.ts` repeats `fetchForecast`.** It is the same never-throw code. `forecastClient.ts` belongs to step 4, and `fetchJson.ts` is outside the step 5 brief's file list, so the two stay apart until a clean-up.
+- **The ERA5 client also asks for dew point and wind**, because the shared `Era5HourlyField` type lists them. The correction reads temperature only.
+- **A comment in `openMeteo.ts`** still says the Previous Runs sample has lead days 1, 3 and 7. It is a shared type, so it waits for an OK.
+- **A missing ERA5 day stretches the bias window** one day further back: the bias takes the latest 21 days that have both values, never fewer. The fixtures have no such gap.
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
 - **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15). Chosen in `docs/design/`: `#0B6FD6` (see "Designs for the second opinion and the runner verdict"); step 6 puts it in the code.
 - **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
