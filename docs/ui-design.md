@@ -1,6 +1,6 @@
 # UI design
 
-Status: approved by Petros on 2026-11-26 as good enough to build. Mockup: https://claude.ai/artifact/RTfTBPYEAEwehKEqQ8jzdq (desktop and mobile; private to the owner).
+Status: superseded on 2026-11-26 by the instrument design (`docs/PRODUCT.md`, and "Step 4" in `NOTES.md`). Kept for the record. It was approved by Petros on 2026-11-26 as good enough to build. Mockup: https://claude.ai/artifact/RTfTBPYEAEwehKEqQ8jzdq (desktop and mobile; private to the owner).
 
 The ASCII wireframes in [architecture.md](architecture.md#5-wireframes) give the layout. This file gives the details steps 4 and 6 build from. Copy is in English.
 

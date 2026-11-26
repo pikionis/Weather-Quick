@@ -27,11 +27,12 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Next.js with a server route in front of Open-Meteo** (proposed by the AI in planning). Chosen instead: a static Vite site with no backend. Why: nothing to run or secure, fewer moving parts in 6 hours. Cost: no shared cache, and score-change notifications will need a serverless function later.
 - **Runner score (the "verdict")** as the extension. Chosen instead: the second opinion. It moves to the roadmap.
 - **Laravel with an AI SDK**, after a 2020 Laravel News article on `vemcogroup/laravel-weather`. Chosen instead: stay on the static Vite site. Why: that package wraps Dark Sky and weatherstack, which are keyed providers, and Dark Sky no longer accepts sign-ups. Open-Meteo needs no backend. A PHP host plus an LLM key would cost 2 to 3 of the remaining ~4:50 hours. An AI-written explanation could come later as a serverless function.
-- **Dropping `hourly` from the base Forecast call** (proposed by the AI before step 4: 44 KB to 2.6 KB, request weight 5.5 to 3.75). Chosen instead: keep it. Why: the contract is already merged, and the change would touch the brief, the type, the fixture and the tests for no visible gain. If nothing uses `hourly` after step 6, it goes then.
+- **Dropping `hourly` from the base Forecast call** (proposed by the AI before step 4: 44 KB to 2.6 KB, request weight 5.5 to 3.75). Chosen instead: keep it. Why: the contract is already merged, and the change would touch the brief, the type, the fixture and the tests for no visible gain. If nothing uses `hourly` after step 6, it goes then. (The instrument now uses it.)
 - **Decision rule without a margin** (the first draft of `docs/architecture.md`: the correction wins whenever its MAE is lower). Chosen instead: it wins only if it is at least 0.1 °C better. Why: otherwise the badge can say "0.0 °C better".
 - **80% band from the corrected errors only** (same draft). Chosen instead: from the errors of the line we show, the source's when the source wins. Why: the band has to describe the line on screen.
 - **Rain bars inside the temperature chart, without an axis** (the mockup in `docs/ui-design.md`). Chosen instead: a rain chart of its own under the temperature, with a mm axis and the same dates. Why: every value shows its unit.
 - **Space Grotesk and Inter** (the mockup). Chosen instead: system fonts. Why: nothing to load and no third-party request.
+- **The first UI, built from the mockup** (cards and stock charts, proposed by the AI). Chosen instead: the instrument in `docs/PRODUCT.md`. Why: too basic and too static for a page that should feel live.
 - **Cuts to fit the 3:40 left** (proposed by the AI: the next 7 days as a table only in step 4, "± X.X °C" instead of the 80% band, no series toggles, a shorter rehearsal). Chosen instead: the full plan, about 7:00 in all. Why: Petros cares more about the full scope than about the 6-hour estimate.
 
 ## What real responses taught us (2026-11-25)
@@ -50,17 +51,22 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **ERA5 ends in `null`.** In the new fixture the last 142 hours of every field are `null`, from 20 November 02:00: the last full day is 19 November, and 20 November has 2 hours. A day counts only with all 24. The shared type allows `null` for ERA5 only, the one response that sends it.
 - **The clock change is inside the 90 days.** Both APIs answer with one fixed +2 h, and 25 October has 24 distinct hours, so forecast and truth stay aligned. Before that date a "local day" runs from 01:00 to 01:00 summer time.
 
-## Step 4: UI base (2026-11-26)
+## Step 4: the instrument (2026-11-26)
 
-- **Follows the approved mockup** (`docs/ui-design.md`): header, Now card, Next 7 days card, Past 4 weeks card and footer, with its tokens and copy. Two approved changes: rain has its own chart with a mm axis, on the same dates as the temperature chart (hovering one shows the same day in both), and system fonts.
-- **Weather text** comes from the WMO table in the Open-Meteo docs ("Mainly clear", "Moderate rain showers"), not from the mockup's shorter labels ("Mostly clear", "Showers"), so nothing is invented.
-- **Refresh:** every 10 minutes while the tab is visible, checked once a minute. A hidden tab makes no requests and refreshes when it comes back. The history comes with the first load and again with the first refresh after local midnight, so yesterday joins it; other refreshes ask for the 7 days only (weight 2.2).
-- **States:** loading; error with the API's `reason` and a retry button; no days; a failed refresh keeps the last data and says so next to the update time.
-- **Weight:** the first load is 73 KB gzip. Recharts and the two charts load after it: 106 KB + 8 KB gzip. Recharts 3.10.1 with the parts we use is lighter than the 137 KB measured on 3.11.1 with more components.
-- **Accessibility:** the past 28 days also open as a table; charts skip their animation under `prefers-reduced-motion`; every value shows its unit, taken from the API's `*_units`.
-- **Dev only:** `?fixture` shows the Kos sample and `?fixture=error` the error state. The build leaves both out (checked in `dist/`).
-- **Components differ from `docs/architecture.md` section 4:** `PastWeeks` holds the past card and lazy-loads `HistoryChart`; `ForecastView` lazy-loads `ForecastChart`; `useForecast` holds the requests and the timer instead of `App`; `Swatches` draws the legend marks. `SeriesToggles` and `TrackRecordBadge` come in step 6. The document gets updated in step 7.
-- **Checked in a browser** (headless Chrome, 2026-11-26): fixture and live at 1280 px; fixture at 390 px, where nothing scrolls sideways except the 7-day table inside its box, as designed; the error state.
+- **A first version, then a redesign.** The first build followed the mockup (`docs/ui-design.md`): three white cards and stock charts. Petros found it too basic and too static. With the `impeccable` design skill we wrote `docs/PRODUCT.md` (users, a precision-instrument personality, anti-references) and agreed the new direction before any code.
+- **One cursor, one reading.** The hero is an hourly trace: the last 24 hours lighter, the next 7 days in ink, dew point under it. Hover, drag, or use ← → (an hour), Shift (a day) and Home (now); the reading on the left follows with temperature, sky, wind and a direction needle, gusts, dew point, rain and its chance. Leaving the trace, or "Back to now", returns to now. The cursor is a real `role="slider"` with a spoken value.
+- **Day columns** stand exactly under their 24 hours of the trace, through one shared plot geometry (`components/plot.ts`). Clicking a day reads its 14:00.
+- **Live, not static.** A status bar shows the Kos clock with seconds, the countdown to the next reading and a light: Live (with one pulse when a reading lands), Reading, Stale, No signal. A failed refresh retries after 1 minute instead of 10.
+- **A refresh asks for one past day** (`past_days=1`), so the trace keeps its last 24 hours. Same weight, 2.2 calls (measured). `docs/architecture.md` section 2 still says "no past_days"; it gets updated in step 7.
+- **Past 4 weeks** as daily range bars (min to max), rain under them on its own mm axis, the warmest and wettest days labelled on the chart, and a day cursor of its own. A table view stays one click away.
+- **Calibration plate** in the footer: model, grid cell and elevation from the response, time zone, licence.
+- **Look:** light, chart-paper neutrals tinted warm, ink, and one signal colour (vermillion) only for now and the cursor. System fonts with tabular figures; the reading is 96 px light against 11 px labels. No new dependency.
+- **Colour checks** (`dataviz` validator and WCAG contrast): air (ink) and dew point (blue) differ by ΔE 39.5 for normal vision and 38.6 for deuteranopia. The validator also flags ink for its lightness and chroma band, a rule for coloured categorical hues; ink is the primary pen on purpose. Text contrast is at least 5.9:1, lines and bars at least 3:1 (the rain bars were 2:1 and were darkened).
+- **Weight:** the first load is 75 KB gzip; Recharts and the two charts load after it.
+- **Weather text** comes from the WMO table in the Open-Meteo docs, so nothing is invented.
+- **Dev only:** `?fixture` shows the Kos sample and `?fixture=error` the error state. The build leaves both out.
+- **Components differ from `docs/architecture.md` section 4:** `Instrument`, `Readout`, `TraceChart`, `DayColumns`, `StatusBar`, `PastWeeks`, `PastChart`, `Footer` and the `useForecast` hook. The document gets updated in step 7.
+- **Checked in headless Chrome** over the DevTools Protocol (2026-11-26): fixture at 1280 px and 390 px with no sideways scroll; hover, arrow keys, Shift and Home move the reading as expected; no console errors; live data and the error state at 1280 px.
 
 ## Dependencies
 
@@ -75,9 +81,9 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
-- **Source and corrected colours fail a check** of the `dataviz` palette validator: the source grey `#5C6670` and the corrected blue `#1F5FA0` differ by ΔE 10.6 for normal vision, below 15. The dash helps; step 6 should pick a clearer pair or label the lines directly.
-- **The Now card has empty space** under its four values until step 6 adds the badge.
-- **On a phone** the 7-day chart drops some day labels (Recharts hides ticks that would overlap), and the 7-day table scrolls sideways.
+- **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15).
+- **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
+- **On a phone** the day columns are tight (about 44 px each), so the sky text shows only in the reading.
 - **The 10-minute refresh was not watched in a browser.** The rule and the timing are unit-tested, and the refresh request was checked live (HTTP 200, 7 days).
 
 ## Data licence
