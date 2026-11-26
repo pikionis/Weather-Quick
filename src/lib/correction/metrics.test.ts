@@ -22,6 +22,10 @@ describe('decide', () => {
     expect(decide(1.5, 1.2, 50)).toBe('ours')
   })
 
+  it('a gain of exactly 0.1 °C counts, despite floating point (0.3 − 0.1 is 0.19999…)', () => {
+    expect(decide(0.3, 0.2, 10)).toBe('ours')
+  })
+
   it('the source wins a small gain, a tie, a loss, or fewer than 10 days', () => {
     expect(decide(1.5, 1.45, 50)).toBe('source')
     expect(decide(1.5, 1.5, 50)).toBe('source')

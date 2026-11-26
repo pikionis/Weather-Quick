@@ -2,6 +2,8 @@
 export const MIN_GAIN = 0.1
 /** ...over at least this many backtest days. */
 export const MIN_DAYS = 10
+/** Room for floating-point rounding, so that a gain of exactly 0.1 °C counts (0.3 − 0.1 is 0.19999…). */
+const ROUNDING = 1e-9
 
 export type Winner = 'ours' | 'source'
 
@@ -19,9 +21,9 @@ export function percentile(values: number[], p: number): number {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo)
 }
 
-/** Ours wins only with enough days and a clear gain; a tie or a small gain goes to the source. */
+/** Ours wins only with enough days and a gain of at least 0.1 °C; a tie or a smaller gain goes to the source. */
 export function decide(maeSource: number, maeOurs: number, n: number): Winner {
-  return n >= MIN_DAYS && maeOurs <= maeSource - MIN_GAIN ? 'ours' : 'source'
+  return n >= MIN_DAYS && maeSource - maeOurs >= MIN_GAIN - ROUNDING ? 'ours' : 'source'
 }
 
 /** 8 in 10 past errors fell between `p10` and `p90` (error = shown − truth). */
