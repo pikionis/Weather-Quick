@@ -3,7 +3,7 @@ import era5Json from '../fixtures/kos-era5.json'
 import previousJson from '../fixtures/kos-previous-runs.json'
 import type { Era5Response, PreviousRunsResponse } from '../openMeteo'
 import { align, type ErrorDay } from './align'
-import { backtest, evaluate, secondOpinion, shownValue, type LeadResult } from './backtest'
+import { backtest, evaluate, secondOpinion } from './backtest'
 import { addDays } from './dates'
 
 /** 60 days from 1 September; truth 20 °C, forecast 20 + error. */
@@ -39,20 +39,19 @@ describe('evaluate', () => {
     expect(r.band).toEqual({ p10: -1, p90: 1 })
   })
 
+  it('lopsided errors give a band on the right side: truth − source, not source − truth', () => {
+    // Three days 1 °C too warm, then one 3 °C too cold; the mean is 0, so a correction cannot help.
+    const r = evaluate(series((i) => (i % 4 === 3 ? -3 : 1)), 'max', 1, '2026-10-30')
+    expect(r.winner).toBe('source')
+    // The truth fell 1 °C below the source to 3 °C above it, never 3 °C below.
+    expect(r.band!.p10).toBeCloseTo(-1)
+    expect(r.band!.p90).toBeCloseTo(3)
+  })
+
   it('today’s bias uses only what is known today', () => {
     // Today 30 Oct (day 59); lead 1 targets 31 Oct, known up to 23 Oct = day 52; window = days 32..52.
     const r = evaluate(series((i) => i), 'max', 1, '2026-10-30')
     expect(r.biasToday).toBeCloseTo(42)
-  })
-})
-
-describe('shownValue', () => {
-  const base: LeadResult = { variable: 'max', lead: 1, n: 50, maeSource: 2, maeOurs: 1, winner: 'ours', band: null, biasToday: 1.5 }
-
-  it('subtracts the bias where ours wins, shows the source otherwise', () => {
-    expect(shownValue(20, base)).toBe(18.5)
-    expect(shownValue(20, { ...base, winner: 'source' })).toBe(20)
-    expect(shownValue(20, { ...base, biasToday: null })).toBe(20)
   })
 })
 

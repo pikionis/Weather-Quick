@@ -35,11 +35,17 @@ describe('decide', () => {
 })
 
 describe('band and range', () => {
-  it('8 in 10 errors fall inside, and the range for the truth flips the sign', () => {
-    const errors = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3]
-    const b = band(errors)
+  it('adds the 10th and 90th percentile of truth − shown to the shown value', () => {
+    const b = band([-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3])
     expect(b).toEqual({ p10: -1.5, p90: 2.5 })
-    // Shown 20 °C, errors from −1.5 to +2.5: the truth was 17.5 to 21.5.
-    expect(rangeFor(20, b)).toEqual({ low: 17.5, high: 21.5 })
+    expect(rangeFor(20, b)).toEqual({ low: 18.5, high: 22.5 })
+  })
+
+  it('with lopsided errors the range leans the right way', () => {
+    // Usually the truth was 0 to 2 °C below the shown value (a warm forecast), once 3 °C above it.
+    const truthMinusShown = [-2, -2, -1.5, -1.5, -1, -1, -1, -0.5, -0.5, 0, 3]
+    expect(rangeFor(20, band(truthMinusShown))).toEqual({ low: 18, high: 20 })
+    // The same days taken as shown − truth and added to the value give the mirror image, 20 to 22: wrong.
+    expect(rangeFor(20, band(truthMinusShown.map((r) => -r)))).toEqual({ low: 20, high: 22 })
   })
 })
