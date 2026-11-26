@@ -19,18 +19,18 @@ Weather Quick shows Kos now, the past 4 weeks and the next 7 days from Open-Mete
 
 ## Brand Personality
 
-Precise, calm, honest. A precision instrument: calibrated scales, numbers that lead, readings that follow your hand. Live, not static: the page shows that it is reading and when it reads next. One moment of wow, the instrument itself; everything around it stays quiet.
+Precise, calm, honest, and visibly live. A dashboard with a menu, where every box has its own options (layers, max or min, a measure). One moment of wow, the live scene over Kos: the wind, rain and temperature of the hour, moving. The precision instrument stays as a second dashboard. Everything else stays quiet and familiar.
 
 ## Anti-references
 
 - A typical weather app: sky-blue gradients, cartoon sun and cloud icons, a giant temperature in the middle of the screen.
 - A dark developer tool: black background, cyan or purple glow, terminal fonts everywhere.
-- Motion everywhere: animations and effects that delay reading the numbers.
+- Motion that is not data: animations and effects that delay reading the numbers. On the live scene, motion carries the wind and the rain; nowhere else.
 
 ## Design Principles
 
 1. **The numbers lead.** Every value is readable first, styled second, and carries its unit.
-2. **One instrument, one cursor.** Moving through time changes the reading; nothing else competes with it.
+2. **The live scene first, the numbers right under it.** What moves on the scene comes from the data of that hour; the boxes below give the exact values.
 3. **Show the calibration.** Say where the data comes from, which grid cell, how fresh it is, and when the source wins.
 4. **Live, not busy.** Show that the page is reading (clock, next update, state); motion only for changes of state.
 5. **Small enough to change live.** The code stays readable for a change during the review call.

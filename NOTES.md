@@ -33,6 +33,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Rain bars inside the temperature chart, without an axis** (the mockup in `docs/ui-design.md`). Chosen instead: a rain chart of its own under the temperature, with a mm axis and the same dates. Why: every value shows its unit.
 - **Space Grotesk and Inter** (the mockup). Chosen instead: system fonts. Why: nothing to load and no third-party request.
 - **The first UI, built from the mockup** (cards and stock charts, proposed by the AI). Chosen instead: the instrument in `docs/PRODUCT.md`. Why: too basic and too static for a page that should feel live.
+- **The simple layouts** (the card mockup and the instrument page, both one page without a menu). Chosen instead: dashboard v2, with a menu, views, layers and options in each box; the instrument stays as a second dashboard. Why: no menu and no options per box.
 - **Cuts to fit the 3:40 left** (proposed by the AI: the next 7 days as a table only in step 4, "± X.X °C" instead of the 80% band, no series toggles, a shorter rehearsal). Chosen instead: the full plan, about 7:00 in all. Why: Petros cares more about the full scope than about the 6-hour estimate.
 
 ## What real responses taught us (2026-11-25)
@@ -51,22 +52,27 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **ERA5 ends in `null`.** In the new fixture the last 142 hours of every field are `null`, from 20 November 02:00: the last full day is 19 November, and 20 November has 2 hours. A day counts only with all 24. The shared type allows `null` for ERA5 only, the one response that sends it.
 - **The clock change is inside the 90 days.** Both APIs answer with one fixed +2 h, and 25 October has 24 distinct hours, so forecast and truth stay aligned. Before that date a "local day" runs from 01:00 to 01:00 summer time.
 
-## Step 4: the instrument (2026-11-26)
+## Step 4: dashboard v2 (2026-11-26)
 
-- **A first version, then a redesign.** The first build followed the mockup (`docs/ui-design.md`): three white cards and stock charts. Petros found it too basic and too static. With the `impeccable` design skill we wrote `docs/PRODUCT.md` (users, a precision-instrument personality, anti-references) and agreed the new direction before any code.
-- **One cursor, one reading.** The hero is an hourly trace: the last 24 hours lighter, the next 7 days in ink, dew point under it. Hover, drag, or use ← → (an hour), Shift (a day) and Home (now); the reading on the left follows with temperature, sky, wind and a direction needle, gusts, dew point, rain and its chance. Leaving the trace, or "Back to now", returns to now. The cursor is a real `role="slider"` with a spoken value.
-- **Day columns** stand exactly under their 24 hours of the trace, through one shared plot geometry (`components/plot.ts`). Clicking a day reads its 14:00.
-- **Live, not static.** A status bar shows the Kos clock with seconds, the countdown to the next reading and a light: Live (with one pulse when a reading lands), Reading, Stale, No signal. A failed refresh retries after 1 minute instead of 10.
-- **A refresh asks for one past day** (`past_days=1`), so the trace keeps its last 24 hours. Same weight, 2.2 calls (measured). `docs/architecture.md` section 2 still says "no past_days"; it gets updated in step 7.
-- **Past 4 weeks** as daily range bars (min to max), rain under them on its own mm axis, the warmest and wettest days labelled on the chart, and a day cursor of its own. A table view stays one click away.
-- **Calibration plate** in the footer: model, grid cell and elevation from the response, time zone, licence.
-- **Look:** light, chart-paper neutrals tinted warm, ink, and one signal colour (vermillion) only for now and the cursor. System fonts with tabular figures; the reading is 96 px light against 11 px labels. No new dependency.
-- **Colour checks** (`dataviz` validator and WCAG contrast): air (ink) and dew point (blue) differ by ΔE 39.5 for normal vision and 38.6 for deuteranopia. The validator also flags ink for its lightness and chroma band, a rule for coloured categorical hues; ink is the primary pen on purpose. Text contrast is at least 5.9:1, lines and bars at least 3:1 (the rain bars were 2:1 and were darkened).
-- **Weight:** the first load is 75 KB gzip; Recharts and the two charts load after it.
-- **Weather text** comes from the WMO table in the Open-Meteo docs, so nothing is invented.
-- **Dev only:** `?fixture` shows the Kos sample and `?fixture=error` the error state. The build leaves both out.
-- **Components differ from `docs/architecture.md` section 4:** `Instrument`, `Readout`, `TraceChart`, `DayColumns`, `StatusBar`, `PastWeeks`, `PastChart`, `Footer` and the `useForecast` hook. The document gets updated in step 7.
-- **Checked in headless Chrome** over the DevTools Protocol (2026-11-26): fixture at 1280 px and 390 px with no sideways scroll; hover, arrow keys, Shift and Home move the reading as expected; no console errors; live data and the error state at 1280 px.
+- **Third layout.** Petros drew dashboard v2 (menu, views, layers, boxes with their own options) and asked for a live scene as its main box, with the instrument kept as a second dashboard. `docs/ui-design.md` describes it.
+- **Live over Kos.**
+  - The coastline around Kos sits on a plane tilted with CSS perspective (no 3D library).
+  - Wind particles move where and as fast as the wind of that hour.
+  - Rain falls as hard as its mm/h: light up to 2.5, moderate up to 7.6, heavy above (`rainLevel` in `hours.ts`).
+  - The land takes the colour of the air temperature, and the layers switch each part on and off.
+  - A timeline runs from the past 28 days to the next 7 (the history's hourly rows are kept for it), with Play and Now. Under it, Wind, Rain or Temperature day by day, the forecast shaded; a click moves the scene to that day.
+  - Under reduced motion the particles become still arrows and the rain stops moving.
+- **Right now:** the now tile shows today's min-to-max bar with a marker that glides on a new reading. The wind tile has a vane whose streaks run faster in stronger wind, and a 16-point direction (327° is NNW).
+- **Next 48 hours, next 7 days, past 28 days** follow the mockup and the layers; the 28-day numbers come from `pastNumbers` in `days.ts`. The step 6 parts (track record, second-opinion tile, the Source/Corrected/80% band switches, the Ours/80%/Gap columns) are in place, empty or disabled, with a note.
+- **Coastline:** Natural Earth 1:10m land and minor islands (public domain), clipped, projected and simplified by `scripts/kos-map.mjs` into one 5 KB SVG path. Not a library and not an API: the page never fetches map data.
+- **Weight:** the first load is 85 KB gzip; Recharts and each chart load after it.
+- **Checked in headless Chrome** over the DevTools Protocol (2026-11-26), with the fixture and with live data, at 1280 px and 390 px:
+  - The wind canvas changes from frame to frame. 2 November 10:00 (6.0 mm/h) shows moderate rain and a darker sky; a dry hour shows none.
+  - Play advances the timeline and Pause stops it; Now returns. Wind, Rain and Temperature switch the strip, and a click on the strip moves the scene.
+  - Every layer hides and shows its charts; all off shows the empty message. Max/Min switches the 7-day table.
+  - Views jump to their box and mark it. The menu folds and unfolds. Instrument opens, survives a reload, and goes back.
+  - On the phone the drawer opens, Esc closes it and focus returns to "Menu". Nothing scrolls sideways; no console errors.
+- **The 28-day numbers on the fixture** match the mockup: warmest 23.7 °C (20 Nov), coolest night 12.1 °C (8 Nov), wettest 66.8 mm (2 Nov), 150 mm over 9 days of 1 mm or more, strongest gust 59 km/h (7 Nov).
 
 ## Dependencies
 
@@ -83,7 +89,10 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
 - **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15).
 - **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
-- **On a phone** the day columns are tight (about 44 px each), so the sky text shows only in the reading.
+- **One reading moves the whole live scene.** Open-Meteo gives wind, rain and temperature for the Kos grid cell, so every particle and drop follows the same values; it is not a wind field like a weather map's. A real field needs more points (Open-Meteo takes several coordinates in one call): a new request and a type change, so it waits for an OK.
+- **The coastline is 1:10m.** Good for the shape of Kos and its neighbours, not for coves or harbours.
+- **More variables are possible.** Open-Meteo also gives cloud cover, pressure, humidity, visibility, sunshine, and waves through the Marine API. Each would change the shared type (cloud cover could draw clouds on the scene); they wait for an OK and a real sample.
+- **On a phone** the instrument's day columns are tight (about 44 px each), so the sky text shows only in the reading.
 - **The 10-minute refresh was not watched in a browser.** The rule and the timing are unit-tested, and the refresh request was checked live (HTTP 200, 7 days).
 
 ## Data licence
