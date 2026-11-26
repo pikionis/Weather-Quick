@@ -42,7 +42,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Multi-model names:** each variable gets the model id as a suffix, e.g. `temperature_2m_max_ecmwf_ifs025`. An unknown model id returns HTTP 400 with a `reason`.
 - **Daylight saving:** the ERA5 sample (29 May to 24 Nov) has one fixed `utc_offset_seconds` (+2 h) and no missing or repeated hour on 25 October. Before that date, its hours are one hour off local summer time. The backtest window (last weeks) is after the change, so it is not affected now.
 - **Previous Runs `_previous_day7`** jumps at midnight (e.g. 17.6 to 18.8 °C): each day comes from a different run. Aggregate per local day, never across midnight.
-- **Fixtures** live in `src/lib/fixtures/`. The Previous Runs one has lead days 1, 3 and 7 for 15 days; the live call will ask for 1 to 7.
+- **Fixtures** live in `src/lib/fixtures/`. The first Previous Runs one had lead days 1, 3 and 7 for 15 days; step 5 replaced it with 90 days and lead days 1 to 7.
 
 ## What real responses taught us (2026-11-26)
 
@@ -74,6 +74,40 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
   - On the phone the drawer opens, Esc closes it and focus returns to "Menu". Nothing scrolls sideways; no console errors.
 - **The 28-day numbers on the fixture** match the mockup: warmest 23.7 °C (20 Nov), coolest night 12.1 °C (8 Nov), wettest 66.8 mm (2 Nov), 150 mm over 9 days of 1 mm or more, strongest gust 59 km/h (7 Nov).
 
+## Step 5: the second opinion, logic only (2026-11-26)
+
+- **New Previous Runs fixture.** The old one (15 days, lead days 1, 3 and 7) gave no backtest day at all. `kos-previous-runs.json` now holds the same 90 days as ERA5, 28 August to 25 November, lead days 1 to 7, default model (best_match), fetched from the cloud session on 2026-11-26 with:
+  `previous-runs-api.open-meteo.com/v1/forecast?latitude=36.893&longitude=27.288&hourly=temperature_2m,temperature_2m_previous_day1,...,temperature_2m_previous_day7&timezone=Europe/Athens&start_date=2026-08-28&end_date=2026-11-25`
+  2,160 hours per column, no `null`, cell 36.875 N, 27.324 E, one fixed +2 h offset. On the 15 days they share, lead days 1, 3 and 7 equal the old fixture to the decimal. The request weighs 5.1 calls.
+- **Code.** `src/lib/correction/`: `align` (hourly to daily max and min by local date, a day only with all 24 hours), `bias` (mean error of the latest 21 days known on D − L − 7), `backtest` (replays every date with a full window, then MAE, winner, band and today's bias per variable and lead), `metrics` (MAE, percentile, the 0.1 °C / 10-day rule, band), `dates`. Clients: `previousRunsClient.ts`, `era5Client.ts` (`models=era5`), both on a shared `fetchJson.ts` with the same never-throw contract as `fetchForecast`.
+- **No look-ahead, tested.** On the fixtures, for lead days 1, 4 and 7, moving every ERA5 hour after D − L − 7 by +10 °C leaves the bias for D identical; moving D − L − 7 itself changes it, so the test can fail.
+- **Band.** The 10th and 90th percentile of the errors (shown − truth) of the line we show: ours where ours wins, the source's where it wins. The range for the truth is shown − p90 to shown − p10. Hidden under 10 days.
+
+### Backtest on the fixtures (today = 25 November)
+
+Errors are forecast − ERA5, °C. Ours wins only with an MAE at least 0.1 °C lower over at least 10 days.
+
+| Variable | Lead | Days | MAE source | MAE ours | Winner | 80% band of errors | Bias subtracted today |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| max | 1 | 56 | 1.26 | 1.23 | source | −0.25 to 2.45 | 0.51 |
+| max | 2 | 55 | 1.21 | 1.26 | source | −0.20 to 2.72 | 0.42 |
+| max | 3 | 54 | 1.28 | 1.41 | source | −0.27 to 2.94 | 0.39 |
+| max | 4 | 53 | 1.29 | 1.55 | source | −0.28 to 2.98 | 0.27 |
+| max | 5 | 52 | 1.41 | 2.04 | source | −0.29 to 3.08 | 0.29 |
+| max | 6 | 51 | 1.47 | 2.20 | source | −0.50 to 2.90 | 0.19 |
+| max | 7 | 50 | 1.42 | 1.79 | source | −0.04 to 3.01 | 0.27 |
+| min | 1 | 56 | 0.94 | 0.86 | source | −1.95 to 0.40 | −0.62 |
+| min | 2 | 55 | 0.98 | 0.83 | ours | −1.81 to 1.21 | −0.73 |
+| min | 3 | 54 | 1.01 | 0.85 | ours | −1.37 to 1.24 | −0.75 |
+| min | 4 | 53 | 1.10 | 0.98 | ours | −1.88 to 1.23 | −0.87 |
+| min | 5 | 52 | 2.13 | 1.35 | ours | −1.76 to 2.62 | −2.09 |
+| min | 6 | 51 | 2.23 | 1.41 | ours | −2.44 to 1.96 | −2.39 |
+| min | 7 | 50 | 1.33 | 1.37 | source | −2.44 to 0.80 | −1.49 |
+
+- **The source wins the daily max at every lead day.** Its error is mostly warm (the band leans positive), but it moves with the season, so a 21-day mean subtracted a week or more later overshoots, more so at longer leads.
+- **Ours wins the daily min at lead days 2 to 6**, by 0.12 to 0.82 °C. At lead 1 the gain is 0.08 °C, under the 0.1 rule, so the source stays. At lead 7 the source wins.
+- **The page will say so**: for the max, "the source wins" at every lead; for the min, our correction at 2 to 6 days ahead.
+
 ## Designs for the second opinion and the runner verdict (2026-11-26)
 
 - `docs/design/` holds three artboards from the Claude Design canvas: the second opinion filled in (step 6), the four states of its Now tile, and the runner verdict. Its README says what each file shows and what was decided.
@@ -82,7 +116,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 
 ## Live (2026-11-26)
 
-- **https://weather-quick-rho.vercel.app**, Vercel project `weather-quick` (Hobby), production, deployed by hand from `feat/ui-base` at 54ef6a7 with Vercel CLI 66.2.0 (the newest release at least 7 days old; 67.0.0 was hours old). Not yet connected to Git, so a push does not deploy.
+- **https://weather-quick-rho.vercel.app**, Vercel project `weather-quick` (Hobby), production, deployed by hand from `feat/ui-base` at 54ef6a7 with Vercel CLI 66.2.0 (the newest release at least 7 days old; 67.0.0 was hours old). Connected to Git on 2026-11-26: every push to `main` deploys to production.
 - **Before the deploy:** gitleaks over the whole history (39 commits) and the working tree found no leaks; `npm audit` found 0 vulnerabilities. trivy is not installed here, so `npm audit` stood in for it.
 - **After the deploy:** the page and its script answer 200 without login, with the same build hash as locally. The Linux build installed 90 packages from our lockfile and built in 7 s, so the restored `@emnapi` entries work there too. Every control was clicked on the live site with live data, with no console errors.
 
@@ -98,7 +132,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP on 2026-11-25. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page must then show the source alone and say why.
 - **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
-- **Security headers are in `vercel.json` but not live yet.** CSP (self, plus the three Open-Meteo API hosts), nosniff, `X-Frame-Options: DENY`, Referrer-Policy and Permissions-Policy. Tested on the built `dist` behind the same headers in Chromium: live data loads and every visible button clicks with no console or CSP errors. The live site gets them on the next deploy; until then it sends only HSTS. Vercel's `Access-Control-Allow-Origin: *` on static files stays: the files are public anyway.
+- **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26): CSP (self, plus the three Open-Meteo API hosts), nosniff, `X-Frame-Options: DENY`, Referrer-Policy and Permissions-Policy. The ZAP baseline afterwards shows no Medium or Low finding except Vercel's `Access-Control-Allow-Origin: *` on static files, which stays: the files are public anyway.
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
 - **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15). Chosen in `docs/design/`: `#0B6FD6` (see "Designs for the second opinion and the runner verdict"); step 6 puts it in the code.
 - **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
