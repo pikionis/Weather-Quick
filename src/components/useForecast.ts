@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { splitDays, todayOf, toDays, type Day } from '../lib/days'
+import { toHours, type Hour } from '../lib/hours'
 import { fetchForecast, forecastUrl, type ForecastQuery } from '../lib/forecastClient'
 import { KOS } from '../lib/location'
 import { isApiError, type ApiError, type ForecastResponse } from '../lib/openMeteo'
@@ -13,6 +14,8 @@ export interface ForecastState {
   latest: ForecastResponse | null
   /** The past 28 days, from the last response that carried the history. */
   past: Day[]
+  /** Every hour of that same response, for the live scene's timeline. */
+  pastHours: Hour[]
   /** Reason of the last failed request; the next good one clears it. */
   error: string | null
   updatedAt: Date | null
@@ -36,6 +39,7 @@ export function useForecast() {
   const [state, setState] = useState<ForecastState>({
     latest: null,
     past: [],
+    pastHours: [],
     error: null,
     updatedAt: null,
     nextAt: 0,
@@ -61,6 +65,7 @@ export function useForecast() {
     setState((s) => ({
       latest: body,
       past: withHistory ? splitDays(toDays(body.daily), today).past : s.past,
+      pastHours: withHistory ? toHours(body.hourly) : s.pastHours,
       error: null,
       updatedAt: new Date(),
       nextAt: nextAt.current,

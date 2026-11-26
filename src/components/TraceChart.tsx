@@ -7,13 +7,14 @@ interface Props {
   now: number
   cursor: number | null
   dayStarts: number[]
+  showDew?: boolean
 }
 
 /**
  * The hourly trace: air temperature (the last 24 hours lighter, the forecast in full ink) and dew point.
  * Loaded lazily with Recharts. It only draws; the cursor lives in Instrument.
  */
-export default function TraceChart({ hours, now, cursor, dayStarts }: Props) {
+export default function TraceChart({ hours, now, cursor, dayStarts, showDew = true }: Props) {
   const data = hours.map((h, i) => ({
     i,
     dew: h.dew,
@@ -39,7 +40,7 @@ export default function TraceChart({ hours, now, cursor, dayStarts }: Props) {
         {dayStarts.map((x) => (
           <ReferenceLine key={x} x={x} stroke="var(--rule)" />
         ))}
-        <Line dataKey="dew" stroke="var(--dew)" strokeWidth={1.25} dot={false} activeDot={false} isAnimationActive={false} />
+        {showDew && <Line dataKey="dew" stroke="var(--dew)" strokeWidth={1.25} dot={false} activeDot={false} isAnimationActive={false} />}
         <Line dataKey="earlier" stroke="var(--ink-soft)" strokeWidth={2} dot={false} activeDot={false} isAnimationActive={false} />
         <Line dataKey="ahead" stroke="var(--ink)" strokeWidth={2} dot={false} activeDot={false} isAnimationActive={false} />
         {/* Step 6: the corrected trace and its 80% band go here. */}

@@ -1,19 +1,13 @@
 import { KOS } from '../lib/location'
-import type { ResponseMeta } from '../lib/openMeteo'
 
-/** The calibration plate: where the numbers come from and which grid cell they describe. */
-export function Footer({ meta }: { meta: ResponseMeta | null }) {
+export function Footer() {
   return (
-    <footer className="plate">
+    <footer className="foot">
       <p>
-        Open-Meteo Forecast API, best match model
-        {meta && ` · grid cell ${meta.latitude.toFixed(3)} N, ${meta.longitude.toFixed(3)} E, ${meta.elevation} m`} ·
-        times {KOS.timezone}
+        Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a> · licensed{' '}
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · coastline from Natural Earth
       </p>
-      <p>
-        <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> ·{' '}
-        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
-      </p>
+      <p>Times in {KOS.timezone}</p>
     </footer>
   )
 }

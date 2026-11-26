@@ -35,7 +35,7 @@ export function PastWeeks({ days, units: u }: Props) {
   }
 
   return (
-    <section className="past" aria-labelledby="past-h">
+    <section id="past4" className="past" aria-labelledby="past-h">
       <div className="section-head">
         <h2 id="past-h">
           Past 4 weeks

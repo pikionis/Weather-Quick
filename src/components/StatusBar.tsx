@@ -21,13 +21,15 @@ interface Props {
   nextAt: number
 }
 
+/** Live state, the Kos clock and when the next reading comes. */
 export function StatusBar({ status, updatedAt, nextAt }: Props) {
   const now = useNow()
   const wait = countdown(nextAt - now)
+  const updated = updatedAt ? localTime(updatedAt, KOS.timezone) : ''
   const detail = {
-    live: `next reading in ${wait}`,
+    live: `updated ${updated} · next in ${wait}`,
     reading: 'asking Open-Meteo…',
-    stale: `last reading ${updatedAt ? localTime(updatedAt, KOS.timezone) : ''} · retry in ${wait}`,
+    stale: `last reading ${updated} · retry in ${wait}`,
     error: `retry in ${wait}`,
   }[status]
 

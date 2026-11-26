@@ -14,7 +14,7 @@ const TraceChart = lazy(() => import('./TraceChart'))
  * The instrument: one time cursor over the hourly trace, one reading that follows it.
  * Hover, drag or use the arrow keys to move through time; leave (or Home) to go back to now.
  */
-export function Instrument({ latest }: { latest: ForecastResponse }) {
+export function Instrument({ latest, showDew = true }: { latest: ForecastResponse; showDew?: boolean }) {
   const [cursor, setCursor] = useState<number | null>(null)
   const box = useRef<HTMLDivElement>(null)
 
@@ -69,7 +69,7 @@ export function Instrument({ latest }: { latest: ForecastResponse }) {
   }
 
   return (
-    <section className="instrument" aria-label="Kos weather instrument">
+    <section id="instrument" className="instrument" aria-label="Kos weather instrument">
       <Readout reading={reading} units={units} onBack={cursor === null ? undefined : () => setCursor(null)} />
       <div className="trace-area">
         <div className="trace-head">
@@ -80,9 +80,11 @@ export function Instrument({ latest }: { latest: ForecastResponse }) {
             <span>
               <LineSwatch color="var(--ink)" /> air {units.temp}
             </span>
-            <span>
-              <LineSwatch color="var(--dew)" thin /> dew point {units.temp}
-            </span>
+            {showDew && (
+              <span>
+                <LineSwatch color="var(--dew)" thin /> dew point {units.temp}
+              </span>
+            )}
             <span className="hint">← → hour · Shift day · Home now</span>
           </span>
         </div>
@@ -110,7 +112,7 @@ export function Instrument({ latest }: { latest: ForecastResponse }) {
           }}
         >
           <Suspense fallback={<ChartFallback height={240} />}>
-            <TraceChart hours={hours} now={now} cursor={cursor} dayStarts={starts.map((s) => s.index)} />
+            <TraceChart hours={hours} now={now} cursor={cursor} dayStarts={starts.map((s) => s.index)} showDew={showDew} />
           </Suspense>
         </div>
         <DayColumns
