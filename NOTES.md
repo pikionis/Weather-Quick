@@ -162,7 +162,7 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 
 ## Security check of the live site (2026-11-26)
 
-- **Headers.** The page, a script and a 404 all send the same set (`curl -I`):
+- **Headers.** The page, a script and a 404 all send the same set (`curl -I`), and a `304 Not Modified` sends none of them (see the ZAP result). The set:
   - `Content-Security-Policy`:
     - `default-src 'self'`, with scripts and styles from self only;
     - `connect-src` is self plus the three Open-Meteo hosts;
@@ -181,7 +181,20 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
   - `permissions: contents: read` and `allow_issue_writing: false`;
   - browser crawl on (`-j`), and the reports kept as the run's artifact.
 
-  ZAP itself is not installed on this machine (no Java, no Docker). **Not run yet:** GitHub starts a `workflow_dispatch` workflow only when the file is on the default branch. `gh workflow run` answered 404, "not found on the default branch".
+  ZAP is not installed on this machine (no Java, no Docker), so it runs on GitHub. GitHub starts a hand-run workflow only from the default branch (from this branch, `gh workflow run` answered 404), so the file went to `main` first, in #8.
+- **ZAP result.** Run 45864175713 on `main` at f784eba (2026-11-26), with ZAP 2.17.0. The reports are the run's artifact `zap-baseline`, kept until 2027-02-24.
+  - 26 URLs, with the browser crawl: it loaded the lazy chart files and the Open-Meteo call.
+  - 0 High and 0 failures. 61 rules pass, among them CSP, clickjacking, nosniff, Permissions-Policy, cookies and known-vulnerable JS libraries (Retire.js).
+  - 8 alerts, the three about caching in one row:
+
+  | Risk | Alert | Where | What we do |
+  | --- | --- | --- | --- |
+  | Medium | Cross-Domain Misconfiguration | page, script, style and favicon: `Access-Control-Allow-Origin: *` | Accepted. Vercel sends it on static files. The site has no login, no cookies and no API of its own, so another site can read only files anyone can download. |
+  | Low | Strict-Transport-Security not set | 5 answers in the browser crawl | Not a gap. They are `304 Not Modified` answers, and Vercel sends a 304 with none of our headers (only Cache-Control, Date, ETag, Server and X-Vercel-*). A 304 only revalidates a copy that came with a 200, every 200 carries HSTS, and the browser keeps the stored copy's headers. A missing header does not clear HSTS; only `max-age=0` does. |
+  | Low | Cross-Origin-Opener-Policy missing | the page | Open. `same-origin` would cut the handle between our window and a page on another site that opens it or is opened by it. The site opens no pop-ups, so it would cost nothing. It is one header in `vercel.json`, outside step 5's files. |
+  | Low | Cross-Origin-Embedder-Policy missing | the page | Not needed. It only matters for cross-origin isolation (for example `SharedArrayBuffer`), which the site does not use. |
+  | Info | Modern Web Application | the page | Expected: the page is built by JavaScript, which is why the crawl uses a browser. |
+  | Info | Re-examine Cache-control, Storable but Non-Cacheable, Retrieved from Cache | page, files, the 404s for `robots.txt` and `sitemap.xml` | Caching is safe, since nothing personal is served. One real point, on speed: see Rough edges. |
 
 ## Dependencies
 
@@ -196,7 +209,8 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 - On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP on 2026-11-25. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page must then show the source alone and say why.
 - **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
-- **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26). "Security check of the live site" lists them and how they were checked. The ZAP scan waits for its workflow to reach `main`.
+- **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26). "Security check of the live site" lists them, how they were checked and the ZAP result.
+- **The hashed files in `/assets/` are not cached for long.** Vercel serves them, like the page, with `max-age=0, must-revalidate`, so every visit asks again for each file and gets a 304. Their names change with their content, so `public, max-age=31536000, immutable` on `/assets/` would be safe. It is one header in `vercel.json`, outside step 5's files.
 - **`fetchJson.ts` repeats `fetchForecast`.** It is the same never-throw code. `forecastClient.ts` belongs to step 4, and `fetchJson.ts` is outside the step 5 brief's file list, so the two stay apart until a clean-up.
 - **The ERA5 client also asks for dew point and wind**, because the shared `Era5HourlyField` type lists them. The correction reads temperature only.
 - **A comment in `openMeteo.ts`** still says the Previous Runs sample has lead days 1, 3 and 7. It is a shared type, so it waits for an OK.
