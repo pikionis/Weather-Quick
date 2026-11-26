@@ -74,6 +74,12 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
   - On the phone the drawer opens, Esc closes it and focus returns to "Menu". Nothing scrolls sideways; no console errors.
 - **The 28-day numbers on the fixture** match the mockup: warmest 23.7 °C (20 Nov), coolest night 12.1 °C (8 Nov), wettest 66.8 mm (2 Nov), 150 mm over 9 days of 1 mm or more, strongest gust 59 km/h (7 Nov).
 
+## Designs for the second opinion and the runner verdict (2026-11-26)
+
+- `docs/design/` holds three artboards from the Claude Design canvas: the second opinion filled in (step 6), the four states of its Now tile, and the runner verdict. Its README says what each file shows and what was decided.
+- **The runner verdict is the brief's option A.** Petros asked for it as well; it is designed here and not built yet.
+- **Corrected trace `#0B6FD6`, source `#5C6670` dashed.** Checked with the `dataviz` validator: ΔE 16.5 against the source grey, 34.7 against the ink and 35.8 against the signal colour.
+
 ## Live (2026-11-26)
 
 - **https://weather-quick-rho.vercel.app**, Vercel project `weather-quick` (Hobby), production, deployed by hand from `feat/ui-base` at 54ef6a7 with Vercel CLI 66.2.0 (the newest release at least 7 days old; 67.0.0 was hours old). Not yet connected to Git, so a push does not deploy.
@@ -94,7 +100,7 @@ Working notes for the reviewers: what we chose, what we assumed and why. Written
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
 - **Security headers are in `vercel.json` but not live yet.** CSP (self, plus the three Open-Meteo API hosts), nosniff, `X-Frame-Options: DENY`, Referrer-Policy and Permissions-Policy. Tested on the built `dist` behind the same headers in Chromium: live data loads and every visible button clicks with no console or CSP errors. The live site gets them on the next deploy; until then it sends only HSTS. Vercel's `Access-Control-Allow-Origin: *` on static files stays: the files are public anyway.
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
-- **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15).
+- **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15). Chosen in `docs/design/`: `#0B6FD6` (see "Designs for the second opinion and the runner verdict"); step 6 puts it in the code.
 - **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
 - **One reading moves the whole live scene.** Open-Meteo gives wind, rain and temperature for the Kos grid cell, so every particle and drop follows the same values; it is not a wind field like a weather map's. A real field needs more points (Open-Meteo takes several coordinates in one call): a new request and a type change, so it waits for an OK.
 - **The coastline is 1:10m.** Good for the shape of Kos and its neighbours, not for coves or harbours.
