@@ -189,6 +189,7 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 - `vitest` added as the test runner: the unit-test rule needs one, and it is Vite's own.
 - **Recharts 3.10.1**, exact version, approved on 2026-11-26 as the one chart library. It is installed in the step 4 PR, not before. Why: JSX that is easy to change live in the review call, SVG, and a ready range area for the step 6 band. Cost: it is the heaviest of the four measured (gzip over React: Recharts 137 KB, Observable Plot 95 KB, Chart.js 65 KB, uPlot 23 KB; Recharts measured on 3.11.1), so it loads lazily. 3.10.1 because 3.11.1 was three days old.
 - **Lockfile rule for that install:** it may only add Recharts and its dependencies. On Windows, `npm install` had removed the `@emnapi` entries in two old worktrees, which could break `npm ci` elsewhere. If anything else disappears, we stop before committing. It happened in step 4: see Rough edges.
+- **`zaproxy/action-baseline` v0.15.0** (released 2025-10-24), for the passive ZAP scan of the live site, approved on 2026-11-26. It is a GitHub Action, not an npm package, so nothing reaches the site. It is pinned to its commit (`de8ad96…`), not to a tag. The workflow runs only by hand, reads the repo only (`contents: read`) and opens no issues; the report stays as the run's artifact. It went to `main` in a PR of its own, before step 5, because GitHub starts a hand-run workflow only from the default branch. The findings are in the step 5 PR.
 
 ## Rough edges
 
