@@ -36,6 +36,33 @@ export function traceWindow(hours: Hour[], current: LocalDateTime, back = 24): {
   return { hours: hours.slice(start), now: nowIndex - start }
 }
 
+/** The `count` hours after the hour that holds the current reading ("22:45" → 23:00 onwards). */
+export function nextHours(hours: Hour[], current: LocalDateTime, count = 48): Hour[] {
+  const nowIndex = hours.findIndex((h) => h.time === `${current.slice(0, 13)}:00`)
+  return nowIndex < 0 ? [] : hours.slice(nowIndex + 1, nowIndex + 1 + count)
+}
+
+/** Hours of an older response, then a newer one; where they overlap, the newer wins. */
+export function joinHours(older: Hour[], newer: Hour[]): Hour[] {
+  const first = newer[0]?.time
+  return first === undefined ? older : [...older.filter((h) => h.time < first), ...newer]
+}
+
+export type RainLevel = 'dry' | 'light' | 'moderate' | 'heavy'
+
+/** Rain intensity in mm per hour: light up to 2.5, moderate up to 7.6, heavy above (the usual classes). Under 0.1 is dry. */
+export function rainLevel(mmPerHour: number): RainLevel {
+  if (mmPerHour < 0.1) return 'dry'
+  if (mmPerHour <= 2.5) return 'light'
+  if (mmPerHour <= 7.6) return 'moderate'
+  return 'heavy'
+}
+
+/** The highest hourly rain chance, in %; 0 for no hours. */
+export function maxRainChance(hours: Hour[]): number {
+  return hours.reduce((m, h) => Math.max(m, h.rainChance), 0)
+}
+
 /** Where each local day starts in the trace (its 00:00 hour), so day columns line up with it. */
 export function dayStarts(hours: Hour[]): { date: LocalDate; index: number }[] {
   return hours.flatMap((h, index) => (h.time.endsWith('T00:00') ? [{ date: h.time.slice(0, 10), index }] : []))

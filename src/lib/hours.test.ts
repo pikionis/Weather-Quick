@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import forecastJson from './fixtures/kos-forecast.json'
-import { bandIndex, dayStarts, nearestIndex, stepCursor, toHours, traceWindow } from './hours'
+import {
+  bandIndex,
+  dayStarts,
+  joinHours,
+  maxRainChance,
+  nearestIndex,
+  nextHours,
+  rainLevel,
+  stepCursor,
+  toHours,
+  traceWindow,
+} from './hours'
 import type { ForecastResponse } from './openMeteo'
 
 const forecast = forecastJson satisfies ForecastResponse
@@ -40,6 +51,43 @@ describe('hours', () => {
     expect(starts[0]).toEqual({ date: '2026-11-25', index: 2 })
     expect(starts).toHaveLength(7)
     expect(starts.at(-1)?.date).toBe('2026-12-01')
+  })
+})
+
+describe('the next 48 hours', () => {
+  it('start with the hour after the current reading', () => {
+    const next = nextHours(hours, forecast.current.time)
+    expect(next).toHaveLength(48)
+    expect(next[0].time).toBe('2026-11-25T23:00')
+    expect(next.at(-1)?.time).toBe('2026-11-27T22:00')
+  })
+
+  it('know their highest rain chance, and are empty when the current hour is missing', () => {
+    expect(maxRainChance(nextHours(hours, forecast.current.time))).toBe(0)
+    expect(maxRainChance([{ ...hours[0], rainChance: 12 }, { ...hours[1], rainChance: 71 }])).toBe(71)
+    expect(nextHours(hours, '2030-01-01T00:00')).toEqual([])
+    expect(maxRainChance([])).toBe(0)
+  })
+})
+
+describe('joining and grading hours', () => {
+  it('keeps the older hours before the newer response, and the newer where they overlap', () => {
+    const older = hours.slice(0, 700)
+    const newer = hours.slice(690).map((h) => ({ ...h, temp: h.temp + 100 }))
+    const joined = joinHours(older, newer)
+    expect(joined).toHaveLength(840)
+    expect(joined[689].temp).toBe(hours[689].temp)
+    expect(joined[690].temp).toBe(hours[690].temp + 100)
+    expect(joinHours(older, [])).toBe(older)
+  })
+
+  it('grades rain per hour as dry, light, moderate or heavy', () => {
+    expect(rainLevel(0)).toBe('dry')
+    expect(rainLevel(0.1)).toBe('light')
+    expect(rainLevel(2.5)).toBe('light')
+    expect(rainLevel(2.6)).toBe('moderate')
+    expect(rainLevel(7.6)).toBe('moderate')
+    expect(rainLevel(7.7)).toBe('heavy')
   })
 })
 

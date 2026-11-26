@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import forecastJson from './fixtures/kos-forecast.json'
-import { compassPoint, weatherText } from './weatherCode'
+import { compassPoint, compassPoint16, weatherText } from './weatherCode'
 
 describe('weatherText', () => {
   it('uses the wording of the Open-Meteo docs', () => {
@@ -17,6 +17,17 @@ describe('weatherText', () => {
 
   it('names an unknown code instead of guessing', () => {
     expect(weatherText(42)).toBe('Weather code 42')
+  })
+})
+
+describe('compassPoint16', () => {
+  it('rounds to the nearest of 16 points', () => {
+    expect(compassPoint16(327)).toBe('NNW')
+    expect(compassPoint16(0)).toBe('N')
+    expect(compassPoint16(11)).toBe('N')
+    expect(compassPoint16(12)).toBe('NNE')
+    expect(compassPoint16(355)).toBe('N')
+    expect(compassPoint16(-22.5)).toBe('NNW')
   })
 })
 

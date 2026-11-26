@@ -36,9 +36,15 @@ export function weatherText(code: number): string {
 }
 
 const POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+const POINTS_16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+const turn = (degrees: number) => ((degrees % 360) + 360) % 360
 
 /** Wind direction in degrees (where the wind comes from) to one of 8 compass points. */
 export function compassPoint(degrees: number): string {
-  const i = Math.round((((degrees % 360) + 360) % 360) / 45) % 8
-  return POINTS[i]
+  return POINTS[Math.round(turn(degrees) / 45) % 8]
+}
+
+/** The same on 16 points, e.g. 327° → "NNW". */
+export function compassPoint16(degrees: number): string {
+  return POINTS_16[Math.round(turn(degrees) / 22.5) % 16]
 }

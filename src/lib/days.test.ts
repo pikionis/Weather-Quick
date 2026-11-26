@@ -4,10 +4,13 @@ import {
   dateLabel,
   dateTimeLabel,
   extremes,
+  longDateTimeLabel,
+  pastNumbers,
   splitDays,
   todayOf,
   toDays,
   weekdayAndDay,
+  weekdayDateLabel,
   weekdayLabel,
   type Day,
 } from './days'
@@ -58,7 +61,24 @@ describe('days', () => {
     expect(warmest?.date).toBe('2026-11-01')
   })
 
+  it('counts the past 28 days in numbers', () => {
+    const { past } = splitDays(toDays(forecast.daily), todayOf(forecast.current))
+    const n = pastNumbers(past)
+    expect(n?.warmest.date).toBe('2026-11-20')
+    expect(n?.warmest.max).toBe(23.7)
+    expect(n?.coolest.date).toBe('2026-11-08')
+    expect(n?.coolest.min).toBe(12.1)
+    expect(n?.wettest?.date).toBe('2026-11-02')
+    expect(n?.gustiest.date).toBe('2026-11-07')
+    expect(n?.gustiest.gustMax).toBe(58.7)
+    expect(n?.totalRain).toBe(150)
+    expect(n?.rainyDays).toBe(9)
+    expect(pastNumbers([])).toBeNull()
+  })
+
   it('labels local dates without shifting them', () => {
+    expect(weekdayDateLabel('2026-10-28')).toBe('Wed 28 Oct')
+    expect(longDateTimeLabel('2026-11-25T22:45')).toBe('Wednesday 25 November, 22:45')
     expect(weekdayLabel('2026-11-26')).toBe('Thu 26')
     expect(dateLabel('2026-10-28')).toBe('28 Oct')
     expect(weekdayAndDay('2026-12-01')).toEqual(['Tue', '1'])

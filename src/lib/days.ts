@@ -46,6 +46,30 @@ export function extremes(days: Day[]): { wettest: Day | null; warmest: Day | nul
   return { wettest, warmest }
 }
 
+export interface PastNumbers {
+  warmest: Day
+  coolest: Day
+  wettest: Day | null
+  gustiest: Day
+  totalRain: number
+  /** Days with at least 1 mm of rain. */
+  rainyDays: number
+}
+
+/** "28 days in numbers". The first day wins a tie; null when there are no days. */
+export function pastNumbers(days: Day[]): PastNumbers | null {
+  if (days.length === 0) return null
+  const pick = (better: (a: Day, b: Day) => boolean) => days.reduce((best, d) => (better(d, best) ? d : best))
+  return {
+    warmest: pick((a, b) => a.max > b.max),
+    coolest: pick((a, b) => a.min < b.min),
+    wettest: extremes(days).wettest,
+    gustiest: pick((a, b) => a.gustMax > b.gustMax),
+    totalRain: Math.round(days.reduce((sum, d) => sum + d.rain, 0) * 10) / 10,
+    rainyDays: days.filter((d) => d.rain >= 1).length,
+  }
+}
+
 // Local dates have no time zone: read and format them as UTC so they never shift by a day.
 const asUtc = (date: LocalDate) => new Date(`${date}T00:00:00Z`)
 const weekdayDay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -62,3 +86,9 @@ export const dateLabel = (date: LocalDate) => dayMonth.format(asUtc(date))
 export const weekdayAndDay = (date: LocalDate): [string, string] => [weekdayOnly.format(asUtc(date)), String(Number(date.slice(8, 10)))]
 /** "Thu 26 Nov, 14:00" for a local date-time such as "2026-11-26T14:00". */
 export const dateTimeLabel = (time: LocalDateTime) => `${weekdayDayMonth.format(asUtc(time.slice(0, 10)))}, ${time.slice(11, 16)}`
+/** "Wed 28 Oct" */
+export const weekdayDateLabel = (date: LocalDate) => weekdayDayMonth.format(asUtc(date))
+
+const longDate = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+/** "Wednesday 25 November, 22:45" */
+export const longDateTimeLabel = (time: LocalDateTime) => `${longDate.format(asUtc(time.slice(0, 10)))}, ${time.slice(11, 16)}`
