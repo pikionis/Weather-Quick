@@ -1,4 +1,6 @@
+import type { Verdict } from '../lib/correction/summary'
 import { compassPoint } from '../lib/weatherCode'
+import { OpinionHead } from './OpinionHead'
 
 export interface Reading {
   /** "Now", "Earlier" or "Forecast" */
@@ -27,10 +29,12 @@ interface Props {
   units: Units
   /** Shown when the cursor has left "now". */
   onBack?: () => void
+  /** The second opinion's state, the same as the Now tile's. */
+  verdict: Verdict
 }
 
 /** The instrument's reading for the hour under the cursor, or now. */
-export function Readout({ reading: r, units: u, onBack }: Props) {
+export function Readout({ reading: r, units: u, onBack, verdict }: Props) {
   return (
     <div className="readout">
       <p className="readout-when">
@@ -74,7 +78,11 @@ export function Readout({ reading: r, units: u, onBack }: Props) {
           Back to now
         </button>
       )}
-      {/* Step 6: the second-opinion badge goes here. */}
+      <div className="readout-opinion" aria-live="polite">
+        <p className="readout-opinion-label">Second opinion</p>
+        <OpinionHead verdict={verdict} />
+        <p className="note">{verdict.note}</p>
+      </div>
     </div>
   )
 }

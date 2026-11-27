@@ -14,6 +14,16 @@ export const LAYERS: { key: Layer; label: string; swatch: 'line' | 'dash' | 'box
   { key: 'rain', label: 'Rain', swatch: 'box', color: 'var(--rain-menu)' },
 ]
 
+/** What the menu's Second opinion switches show on the next 7 days. */
+export type Line = 'source' | 'ours' | 'band'
+export type Lines = Record<Line, boolean>
+export const DEFAULT_LINES: Lines = { source: true, ours: true, band: true }
+export const LINES: { key: Line; label: string }[] = [
+  { key: 'source', label: 'Source' },
+  { key: 'ours', label: 'Corrected' },
+  { key: 'band', label: '80% band' },
+]
+
 export type Dashboard = 'overview' | 'instrument'
 
 /** Under 900 px the menu is a drawer over the page. */

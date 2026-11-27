@@ -1,7 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react'
+import type { Verdict } from '../lib/correction/summary'
 import type { Day } from '../lib/days'
 import type { ForecastResponse } from '../lib/openMeteo'
 import { compassPoint16, weatherText } from '../lib/weatherCode'
+import { OpinionHead } from './OpinionHead'
 
 interface Props {
   current: ForecastResponse['current']
@@ -9,6 +11,8 @@ interface Props {
   today: Day | undefined
   /** The highest hourly rain chance in the next 48 hours, %. */
   rainChance48: number
+  /** The second opinion's state, for its tile. */
+  verdict: Verdict
 }
 
 function Tile({ label, value, note, children }: { label: string; value: ReactNode; note: ReactNode; children?: ReactNode }) {
@@ -22,8 +26,8 @@ function Tile({ label, value, note, children }: { label: string; value: ReactNod
   )
 }
 
-/** The four "now" boxes, and the place where step 6 puts the second opinion. */
-export function NowTiles({ current: c, units: u, today, rainChance48 }: Props) {
+/** The four "now" boxes and the second opinion's tile. */
+export function NowTiles({ current: c, units: u, today, rainChance48, verdict: v }: Props) {
   return (
     <ul id="overview" className="tiles" aria-label="Right now">
       <Tile
@@ -58,10 +62,15 @@ export function NowTiles({ current: c, units: u, today, rainChance48 }: Props) {
         }
         note={`Next 48 h: at most ${rainChance48} % chance`}
       />
-      <li className="tile tile-second">
+      <li className={v.kind === 'ours' ? 'tile tile-second tile-ours' : 'tile tile-second'} aria-live="polite">
         <p className="tile-label">Second opinion</p>
-        <p className="tile-pending">Arrives with the backtest</p>
-        <p className="tile-note">Our corrected max and min next to the source, with the gap and how sure we are.</p>
+        <OpinionHead verdict={v} />
+        <p className="tile-note">{v.note}</p>
+        {(v.kind === 'ours' || v.kind === 'source') && (
+          <p className="tile-note">
+            <a href="#track">See the track record</a>
+          </p>
+        )}
       </li>
     </ul>
   )

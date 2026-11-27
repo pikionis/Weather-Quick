@@ -128,9 +128,9 @@ How to read the table:
   - But that warm error fell week by week, from +4 to +7 °C in late August and early September to about 0 in November.
   - The bias window ends 8 to 14 days before the day it corrects. So it subtracts last month's error and overshoots, more at longer leads.
   - One likely cause is the truth: the ERA5 cell is mostly sea, which keeps the summer maximum down. Not tested.
-- **Ours wins the daily min at lead days 2 to 6**, by 0.12 to 0.82 °C.
+- **Ours wins the daily min at lead days 2 to 6**, by 0.12 to 0.81 °C (from the unrounded MAE; the rounded table gives 0.82).
   - The source's min at lead days 5 and 6 runs about 2 °C cold in almost every week: a mean of −1.9 and −2.1 °C, against −0.8 at the other leads. That is a repeating error, which is what the correction is for. We have not checked why these two leads differ.
-  - At lead 1 the gain is 0.08 °C, under the 0.1 rule, so the source stays. At lead 7 the source wins.
+  - At lead 1 the gain is 0.07 °C (0.08 from the rounded table), under the 0.1 rule, so the source stays. At lead 7 the source wins.
 - **The page will say so**: for the max, "the source wins" at every lead; for the min, our correction at 2 to 6 days ahead.
 - **Checked twice.** A separate script, written without reading `src/lib/correction`, gave the same n, MAE, winner, band and today's bias in every row.
 
@@ -147,6 +147,40 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 | Sun 29 | 19.2 | = source | 16.2 to 19.5 | 0.0 | 16.8 | 17.7 | 16.4 to 19.5 | +0.9 |
 | Mon 30 | 17.9 | = source | 14.8 to 18.2 | 0.0 | 13.5 | 15.6 | 13.0 to 17.3 | +2.1 |
 | Tue 1 | 13.8 | = source | 10.9 to 14.3 | 0.0 | 9.2 | 11.6 | 9.6 to 14.0 | +2.4 |
+
+## Step 6: the second opinion on the page (2026-11-27)
+
+- **What the page shows.**
+  - **The Now tile** has four states from the design (ours wins, the source wins, data missing, too few days) and a fifth, "Working out…", while the 90 days load.
+  - **Next 7 days:**
+    - the source dashed, ours solid only on the days where ours won, and the 80% band of the line shown;
+    - "Source" and "Ours" on the chart, and a tooltip per day;
+    - the Ours, 80% range and Gap columns.
+  - **Track record:** bars per lead day, Max/Min, Chart/Table, and one sentence.
+  - **"Why ours should beat the source"**, with today's numbers and the link to ADR 0002.
+  - **The menu switches** Source, Corrected and 80% band act on the next 7 days. Corrected and the band are off while there is nothing to draw.
+  - **The instrument** shows the same badge under the reading. Its day columns show the value the page shows, with a blue dot where it is ours.
+- **The texts come from the results**, not from the design's sample sentences. `src/lib/correction/summary.ts` (new, approved by Petros for this step) builds the tile, the Track record sentence and the first "why" point. Its tests pin them on the fixtures. On the fixtures and live on 27 November they say the same: the source wins the max at every lead; ours wins the min from 2 to 6 days ahead.
+- **The band takes the colour of the line shown**, grey for the source and blue for ours. Where the line shown changes inside the week (on the real min: the source on lead 1, ours from lead 2), it changes colour halfway between the two days. The design did not have this case; Petros approved the proposal.
+- **The source is the max and min of the forecast's hours** everywhere the second opinion is: the Source column, the chart, and the instrument's day columns. So the instrument's Sat 28 min reads 18.0 °C (from the hours), where step 4 showed the daily field's 17.6.
+- **Menu colours.** The design's menu blue `#3D8EE6` failed the `dataviz` validator next to the source grey `#8C97A3` on the dark menu (ΔE 13.6, under the 15 floor). `#3A8BF5` passes (ΔE 15.8, contrast ≥ 3:1). On a pressed switch, which is light, the swatches take the chart's own colours (`#5C6670` and `#0B6FD6`, ΔE 16.5, both ≥ 3:1 on `#EEF2F6`). The validator also flags both greys as "below the chroma floor"; that is on purpose, since the source is the neutral reference and is told apart by its dashes and its label too.
+- **Layout.**
+  - Next 48 hours now takes the full width; the Track record and the Why box share a row under Next 7 days, as in the design.
+  - The 7-day table goes under the chart when the box is narrower than chart plus table (about 1,300 px of window), instead of scrolling sideways and hiding Rain and Wind.
+  - On a phone the day labels go on two lines, so all seven fit.
+- **When a source fails.**
+  - The page shows the source alone and says why: *Previous Runs answered "…"* when the API answered with an error, *could not be reached* when there was no connection, and *gave no answer within 45 seconds* when it hung.
+  - The wait limit is new. On 27 November Previous Runs accepted connections but sent nothing for about five minutes: 0 bytes in 50 s for the 90-day request, and in 40 s for a one-day request. Without a limit, the page would have shown "Working out…" indefinitely.
+  - In dev, `?fixture&opinion=limit` and `?fixture&opinion=few` show the two states without a real failure; the build drops them.
+- **Live check, 2026-11-27, the same two requests the page sends (90 days to today):**
+  - **Previous Runs:** after the outage, HTTP 200 in 0.58 s, `X-RateLimit-Cost` 5.14. Cell 36.875 N, 27.324 E, +2 h. 2,160 hours in all 8 columns, no `null`.
+  - **ERA5:** HTTP 200 in 22 s, cost 1.93. Cell 37.0 N, 27.25 E. `null` from 21 November 02:00; the last full day is 20 November.
+  - Both match the types and the fixtures. One page load costs about 7.1 calls of the 600 a minute and 10,000 a day; the 10-minute refresh does not repeat it.
+- **Checked:**
+  - 108 tests, lint, `tsc -b` and the build pass. The first load is 89.5 KB gzip (85 KB before); the two new charts load lazily.
+  - In headless Chrome, at 1280 and 390 px, with the fixtures and live, every value in the 7-day table matches the table in "Today's second opinion on the fixtures".
+  - The switches add and remove their line or band. The tooltips open. The states for limit, too few days (6 days at lead 1, from 40 days of data), blocked and no answer show as designed. No console errors and no sideways scroll.
+  - **CSP:** the build, served locally with the headers of `vercel.json` and live data, gave 0 violations over both dashboards and the phone width. The control request (example.com) was caught.
 
 ## Designs for the second opinion and the runner verdict (2026-11-26)
 
@@ -191,7 +225,7 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
   | --- | --- | --- | --- |
   | Medium | Cross-Domain Misconfiguration | page, script, style and favicon: `Access-Control-Allow-Origin: *` | Accepted. Vercel sends it on static files. The site has no login, no cookies and no API of its own, so another site can read only files anyone can download. |
   | Low | Strict-Transport-Security not set | 5 answers in the browser crawl | Not a gap. They are `304 Not Modified` answers, and Vercel sends a 304 with none of our headers (only Cache-Control, Date, ETag, Server and X-Vercel-*). A 304 only revalidates a copy that came with a 200, every 200 carries HSTS, and the browser keeps the stored copy's headers. A missing header does not clear HSTS; only `max-age=0` does. |
-  | Low | Cross-Origin-Opener-Policy missing | the page | Open. `same-origin` would cut the handle between our window and a page on another site that opens it or is opened by it. The site opens no pop-ups, so it would cost nothing. It is one header in `vercel.json`, outside step 5's files. |
+  | Low | Cross-Origin-Opener-Policy missing | the page | Goes in at step 7 (Petros, 2026-11-27): `same-origin` in `vercel.json`. It cuts the handle between our window and a page on another site that opens it or is opened by it. The site opens no pop-ups, so it costs nothing. |
   | Low | Cross-Origin-Embedder-Policy missing | the page | Not needed. It only matters for cross-origin isolation (for example `SharedArrayBuffer`), which the site does not use. |
   | Info | Modern Web Application | the page | Expected: the page is built by JavaScript, which is why the crawl uses a browser. |
   | Info | Re-examine Cache-control, Storable but Non-Cacheable, Retrieved from Cache | page, files, the 404s for `robots.txt` and `sitemap.xml` | Caching is safe, since nothing personal is served. One real point, on speed: see Rough edges. |
@@ -206,7 +240,12 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 
 ## Rough edges
 
-- On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP on 2026-11-25. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page must then show the source alone and say why.
+- On 2026-11-25 the Previous Runs and ERA5 (archive) APIs answered "Daily API request limit exceeded" from the shared cloud IP. Visitors call from their own IPs, but a busy shared network (office, VPN) could hit the same limit. The page then shows the source alone and says why (step 6).
+- **The backtest is fetched on every page load**, about 7.1 calls of weight and 200 KB. Nothing is cached between visits, because there is no backend. A visitor who reloads often uses up the limits sooner.
+- **The instrument's hourly trace stays the source's.** The correction is per day (a daily max and min), so there is no honest corrected value for each hour. The instrument shows ours in its day columns and in the badge.
+- **Lead day 7 is in the Track record but never in Next 7 days.** The forecast has today and 6 more days, so the 7-day view reaches lead 6.
+- **A lead with under 10 days, next to leads with more,** is described as "not 0.1 °C better" in the Track record sentence. The table shows its day count. With 90 days every lead has 50 or more, so this has not happened.
+- **On a phone the 7-day table scrolls sideways inside its box**, as in step 4; the page itself does not.
 - **npm on Windows drops two lockfile entries** (`@emnapi/core` and `@emnapi/runtime`, for the wasm32 Rolldown binding). The Recharts commit puts them back exactly as they were; any later `npm install` on Windows needs the same check. `npm ci` passes on Windows; on Linux it is untested until the Vercel deploy.
 - **Codex review is not connected.** PR #1 and PR #3 got no review, even after an explicit `@codex review`. Until it is, Petros reviews each PR.
 - **Security headers are live** since the deploy of `main` at db5a8db (2026-11-26). "Security check of the live site" lists them, how they were checked and the ZAP result.
@@ -216,7 +255,6 @@ This is what step 6 will show in Next 7 days, from `correctedForecast` with the 
 - **A comment in `openMeteo.ts`** still says the Previous Runs sample has lead days 1, 3 and 7. It is a shared type, so it waits for an OK.
 - **A missing ERA5 day stretches the bias window** one day further back: the bias takes the latest 21 days that have both values, never fewer. The fixtures have no such gap.
 - **No dark mode.** The design has light tokens only, so the page sets `color-scheme: light`.
-- **Step 6 needs a colour for the corrected trace** that stands apart from the ink of the source trace and from the signal colour, and passes the `dataviz` validator. The mockup pair (grey and blue) failed it (ΔE 10.6, below 15). Chosen in `docs/design/`: `#0B6FD6` (see "Designs for the second opinion and the runner verdict"); step 6 puts it in the code.
 - **The trace redraws on every cursor move** (about 170 points). Smooth on a laptop; not measured on a slow phone.
 - **One reading moves the whole live scene.** Open-Meteo gives wind, rain and temperature for the Kos grid cell, so every particle and drop follows the same values; it is not a wind field like a weather map's. A real field needs more points (Open-Meteo takes several coordinates in one call): a new request and a type change, so it waits for an OK.
 - **The coastline is 1:10m.** Good for the shape of Kos and its neighbours, not for coves or harbours.

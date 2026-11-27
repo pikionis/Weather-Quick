@@ -1,8 +1,9 @@
+import { resultsOf } from '../lib/correction/summary'
 import { splitDays, todayOf, toDays, type Day } from '../lib/days'
 import { joinHours, maxRainChance, nextHours, toHours, type Hour } from '../lib/hours'
 import type { ForecastResponse } from '../lib/openMeteo'
 import { AboutData } from './AboutData'
-import type { Layers } from './layers'
+import type { Layers, Lines } from './layers'
 import { LiveScene } from './LiveScene'
 import { Next48Hours } from './Next48Hours'
 import { Next7Days } from './Next7Days'
@@ -10,16 +11,20 @@ import { NowTiles } from './NowTiles'
 import { Past28Days } from './Past28Days'
 import { PastNumbers } from './PastNumbers'
 import { TrackRecord } from './TrackRecord'
+import type { SecondOpinion } from './useSecondOpinion'
+import { WhyOurs } from './WhyOurs'
 
 interface Props {
   latest: ForecastResponse
   past: Day[]
   pastHours: Hour[]
   layers: Layers
+  second: SecondOpinion
+  lines: Lines
 }
 
-/** The main dashboard: the live scene first, then now, the next 48 hours, the next 7 days and the past 28. */
-export function Overview({ latest, past, pastHours, layers }: Props) {
+/** The main dashboard: the live scene, now, the next 48 hours, the next 7 days with the second opinion, the past 28. */
+export function Overview({ latest, past, pastHours, layers, second, lines }: Props) {
   const c = latest.current
   const today = todayOf(c)
   const latestHours = toHours(latest.hourly)
@@ -43,12 +48,15 @@ export function Overview({ latest, past, pastHours, layers }: Props) {
         dailyUnits={latest.daily_units}
         layers={layers}
       />
-      <NowTiles current={c} units={latest.current_units} today={next[0]} rainChance48={maxRainChance(next48)} />
+      <NowTiles current={c} units={latest.current_units} today={next[0]} rainChance48={maxRainChance(next48)} verdict={second.verdict} />
       <div className="row">
         <Next48Hours hours={next48} units={latest.hourly_units} layers={layers} />
-        <TrackRecord />
       </div>
-      <Next7Days days={next} today={today} units={latest.daily_units} />
+      <Next7Days days={next} today={today} units={latest.daily_units} second={second} lines={lines} />
+      <div className="row">
+        <TrackRecord second={second} />
+        <WhyOurs results={resultsOf(second.state)} />
+      </div>
       <div className="row">
         <Past28Days days={past} units={latest.daily_units} layers={layers} />
         <PastNumbers days={past} units={latest.daily_units} />

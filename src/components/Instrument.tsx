@@ -7,6 +7,7 @@ import { DayColumns } from './DayColumns'
 import { plotFraction } from './plot'
 import { Readout, type Reading } from './Readout'
 import { ChartFallback, LineSwatch } from './Swatches'
+import type { SecondOpinion } from './useSecondOpinion'
 
 const TraceChart = lazy(() => import('./TraceChart'))
 
@@ -14,7 +15,7 @@ const TraceChart = lazy(() => import('./TraceChart'))
  * The instrument: one time cursor over the hourly trace, one reading that follows it.
  * Hover, drag or use the arrow keys to move through time; leave (or Home) to go back to now.
  */
-export function Instrument({ latest, showDew = true }: { latest: ForecastResponse; showDew?: boolean }) {
+export function Instrument({ latest, showDew = true, second }: { latest: ForecastResponse; showDew?: boolean; second: SecondOpinion }) {
   const [cursor, setCursor] = useState<number | null>(null)
   const box = useRef<HTMLDivElement>(null)
 
@@ -70,7 +71,7 @@ export function Instrument({ latest, showDew = true }: { latest: ForecastRespons
 
   return (
     <section id="instrument" className="instrument" aria-label="Kos weather instrument">
-      <Readout reading={reading} units={units} onBack={cursor === null ? undefined : () => setCursor(null)} />
+      <Readout reading={reading} units={units} onBack={cursor === null ? undefined : () => setCursor(null)} verdict={second.verdict} />
       <div className="trace-area">
         <div className="trace-head">
           <span>
@@ -83,6 +84,11 @@ export function Instrument({ latest, showDew = true }: { latest: ForecastRespons
             {showDew && (
               <span>
                 <LineSwatch color="var(--dew)" thin /> dew point {units.temp}
+              </span>
+            )}
+            {second.days.some((f) => f.max.shown === 'ours' || f.min.shown === 'ours') && (
+              <span>
+                <span className="ours-dot" aria-hidden="true" /> ours in the day columns
               </span>
             )}
             <span className="hint">← → hour · Shift day · Home now</span>
@@ -120,6 +126,7 @@ export function Instrument({ latest, showDew = true }: { latest: ForecastRespons
           starts={new Map(starts.map((s) => [s.date, s.index]))}
           count={hours.length}
           activeDate={date}
+          opinion={second.days}
           units={units}
           onPick={setCursor}
         />
