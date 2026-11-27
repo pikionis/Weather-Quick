@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { HISTORY_DAYS } from '../lib/correction/summary'
 import { KOS } from '../lib/location'
 import { LayersPanel } from './LayersPanel'
-import { isNarrow, VIEWS, type Dashboard, type Layer, type Layers } from './layers'
+import { isNarrow, LINES, VIEWS, type Dashboard, type Layer, type Layers, type Line, type Lines } from './layers'
 import { ViewsNav } from './ViewsNav'
 
 interface Props {
@@ -12,6 +13,10 @@ interface Props {
   onDashboard: (d: Dashboard) => void
   layers: Layers
   onLayer: (layer: Layer) => void
+  lines: Lines
+  onLine: (line: Line) => void
+  /** The backtest is in, so Corrected and the band have something to show. */
+  opinionReady: boolean
   ready: boolean
 }
 
@@ -19,7 +24,7 @@ interface Props {
  * The dashboard menu: place, dashboards, views, layers and the second-opinion switches.
  * On a laptop it folds to a narrow rail; on a phone it is a drawer that Esc or the backdrop closes.
  */
-export function Sidebar({ open, onToggle, dashboard, dashboardHref, onDashboard, layers, onLayer, ready }: Props) {
+export function Sidebar({ open, onToggle, dashboard, dashboardHref, onDashboard, layers, onLayer, lines, onLine, opinionReady, ready }: Props) {
   const first = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -101,16 +106,26 @@ export function Sidebar({ open, onToggle, dashboard, dashboardHref, onDashboard,
 
         <div>
           <p className="sect">Second opinion</p>
-          {/* Step 6 turns these on, once the backtest of step 5 gives them something to show. */}
-          <div className="side-list">
-            {['Source', 'Corrected', '80% band'].map((label) => (
-              <button key={label} type="button" className="tog" disabled aria-describedby="so-note">
-                {label}
+          <div role="group" aria-label="Second opinion switches" className="side-list">
+            {LINES.map((l) => (
+              <button
+                key={l.key}
+                type="button"
+                className="tog"
+                aria-pressed={lines[l.key]}
+                disabled={l.key !== 'source' && !opinionReady}
+                aria-describedby="so-note"
+                onClick={() => onLine(l.key)}
+              >
+                <span aria-hidden="true" className={`sw sw-${l.key}`} />
+                {l.label}
               </button>
             ))}
           </div>
           <p id="so-note" className="side-note">
-            Arrive with the backtest: our correction, its band and the source, on the next 7 days.
+            {opinionReady
+              ? `Shown on the next 7 days. Worked out when the page opens, from the last ${HISTORY_DAYS} days.`
+              : 'Corrected and the band wait for the backtest: the Second opinion box says why.'}
           </p>
         </div>
 

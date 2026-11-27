@@ -2,7 +2,7 @@ import { splitDays, todayOf, toDays, type Day } from '../lib/days'
 import { joinHours, maxRainChance, nextHours, toHours, type Hour } from '../lib/hours'
 import type { ForecastResponse } from '../lib/openMeteo'
 import { AboutData } from './AboutData'
-import type { Layers } from './layers'
+import type { Layers, Lines } from './layers'
 import { LiveScene } from './LiveScene'
 import { Next48Hours } from './Next48Hours'
 import { Next7Days } from './Next7Days'
@@ -18,10 +18,11 @@ interface Props {
   pastHours: Hour[]
   layers: Layers
   second: SecondOpinion
+  lines: Lines
 }
 
 /** The main dashboard: the live scene, now, the next 48 hours, the next 7 days with the second opinion, the past 28. */
-export function Overview({ latest, past, pastHours, layers, second }: Props) {
+export function Overview({ latest, past, pastHours, layers, second, lines }: Props) {
   const c = latest.current
   const today = todayOf(c)
   const latestHours = toHours(latest.hourly)
@@ -50,7 +51,7 @@ export function Overview({ latest, past, pastHours, layers, second }: Props) {
         <Next48Hours hours={next48} units={latest.hourly_units} layers={layers} />
         <TrackRecord />
       </div>
-      <Next7Days days={next} today={today} units={latest.daily_units} />
+      <Next7Days days={next} today={today} units={latest.daily_units} second={second} lines={lines} />
       <div className="row">
         <Past28Days days={past} units={latest.daily_units} layers={layers} />
         <PastNumbers days={past} units={latest.daily_units} />

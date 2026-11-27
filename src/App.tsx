@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Footer } from './components/Footer'
 import { Instrument, InstrumentEmpty } from './components/Instrument'
-import { DEFAULT_LAYERS, isNarrow, type Dashboard } from './components/layers'
+import { DEFAULT_LAYERS, DEFAULT_LINES, isNarrow, type Dashboard } from './components/layers'
 import { Overview } from './components/Overview'
 import { PageHeader } from './components/PageHeader'
 import { PastWeeks } from './components/PastWeeks'
@@ -27,6 +27,7 @@ function App() {
   const second = useSecondOpinion(latest)
   const [menu, setMenu] = useState(() => !isNarrow())
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
+  const [lines, setLines] = useState(DEFAULT_LINES)
   const [dashboard, setDashboard] = useState<Dashboard>(readDashboard)
   const menuButton = useRef<HTMLButtonElement>(null)
 
@@ -60,6 +61,9 @@ function App() {
         onDashboard={choose}
         layers={layers}
         onLayer={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
+        lines={lines}
+        onLine={(key) => setLines((l) => ({ ...l, [key]: !l[key] }))}
+        opinionReady={second.ready}
         ready={latest !== null}
       />
       <main className="main">
@@ -75,7 +79,7 @@ function App() {
         {!latest ? (
           <InstrumentEmpty error={forecast.error} onRetry={forecast.retry} />
         ) : dashboard === 'overview' ? (
-          <Overview latest={latest} past={forecast.past} pastHours={forecast.pastHours} layers={layers} second={second} />
+          <Overview latest={latest} past={forecast.past} pastHours={forecast.pastHours} layers={layers} second={second} lines={lines} />
         ) : (
           <>
             <Instrument latest={latest} showDew={layers.dew} second={second} />
