@@ -1,3 +1,4 @@
+import { resultsOf } from '../lib/correction/summary'
 import { splitDays, todayOf, toDays, type Day } from '../lib/days'
 import { joinHours, maxRainChance, nextHours, toHours, type Hour } from '../lib/hours'
 import type { ForecastResponse } from '../lib/openMeteo'
@@ -11,6 +12,7 @@ import { Past28Days } from './Past28Days'
 import { PastNumbers } from './PastNumbers'
 import { TrackRecord } from './TrackRecord'
 import type { SecondOpinion } from './useSecondOpinion'
+import { WhyOurs } from './WhyOurs'
 
 interface Props {
   latest: ForecastResponse
@@ -49,9 +51,12 @@ export function Overview({ latest, past, pastHours, layers, second, lines }: Pro
       <NowTiles current={c} units={latest.current_units} today={next[0]} rainChance48={maxRainChance(next48)} verdict={second.verdict} />
       <div className="row">
         <Next48Hours hours={next48} units={latest.hourly_units} layers={layers} />
-        <TrackRecord />
       </div>
       <Next7Days days={next} today={today} units={latest.daily_units} second={second} lines={lines} />
+      <div className="row">
+        <TrackRecord second={second} />
+        <WhyOurs results={resultsOf(second.state)} />
+      </div>
       <div className="row">
         <Past28Days days={past} units={latest.daily_units} layers={layers} />
         <PastNumbers days={past} units={latest.daily_units} />

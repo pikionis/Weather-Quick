@@ -856,6 +856,44 @@ a:hover {
   font-weight: 600;
 }
 
+/* Track record and why */
+.track-box {
+  flex: 1.2 1 440px;
+}
+.ctrls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.verdict-line {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.track-box .legend {
+  margin: 0;
+}
+.why {
+  flex: 1 1 360px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.why ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.why p {
+  margin: 0;
+}
+.why .truth {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
 /* Next 7 days: chart and table side by side */
 .split {
   display: flex;
