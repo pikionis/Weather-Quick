@@ -3,7 +3,7 @@ import era5Json from '../fixtures/kos-era5.json'
 import previousJson from '../fixtures/kos-previous-runs.json'
 import type { ApiError, Era5Response, PreviousRunsResponse } from '../openMeteo'
 import type { LeadResult } from './backtest'
-import { daysAhead, missSentence, opinionFrom, signed, trackSentence, verdict, type OpinionState } from './summary'
+import { daysAhead, missSentence, NO_ANSWER, opinionFrom, signed, trackSentence, UNREACHABLE, verdict, type OpinionState } from './summary'
 
 const previous = previousJson as unknown as PreviousRunsResponse
 const era5 = era5Json as unknown as Era5Response
@@ -78,6 +78,15 @@ describe('verdict, the other states', () => {
       headline: 'Not available now',
       note: 'Previous Runs answered "Daily API request limit exceeded". The source is shown alone.',
     })
+  })
+
+  it('data missing: a source that did not answer in time, or could not be reached', () => {
+    expect(verdict({ kind: 'missing', source: 'ERA5', reason: NO_ANSWER }).note).toBe(
+      'ERA5 gave no answer within 45 seconds. The source is shown alone.',
+    )
+    expect(verdict({ kind: 'missing', source: 'Previous Runs', reason: UNREACHABLE }).note).toBe(
+      'Previous Runs could not be reached. The source is shown alone.',
+    )
   })
 
   it('too few days: the most days any lead has, against the 10 needed', () => {

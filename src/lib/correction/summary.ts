@@ -7,6 +7,12 @@ import { MIN_DAYS, MIN_GAIN } from './metrics'
 /** How many days of Previous Runs and ERA5 the page reads for the backtest. 35 would leave almost no backtest day. */
 export const HISTORY_DAYS = 90
 
+/** How long the page waits for each source. ERA5 has taken 22 s for 90 days; on 2026-11-27 Previous Runs sent nothing at all. */
+export const TIMEOUT_SECONDS = 45
+/** What the page says of a source that did not answer in time, or could not be reached at all (offline, blocked). */
+export const NO_ANSWER = `gave no answer within ${TIMEOUT_SECONDS} seconds`
+export const UNREACHABLE = 'could not be reached'
+
 /** The second opinion as the page has it: still loading, a source that failed, or the backtest results. */
 export type OpinionState =
   | { kind: 'loading' }
@@ -54,7 +60,7 @@ export function verdict(state: OpinionState): Verdict {
       kind: 'missing',
       pill: 'Unavailable',
       headline: 'Not available now',
-      note: `${state.source} answered "${state.reason}". The source is shown alone.`,
+      note: `${state.source} ${state.reason === NO_ANSWER || state.reason === UNREACHABLE ? state.reason : `answered "${state.reason}"`}. The source is shown alone.`,
     }
   }
   const { results } = state
