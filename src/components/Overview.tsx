@@ -10,16 +10,18 @@ import { NowTiles } from './NowTiles'
 import { Past28Days } from './Past28Days'
 import { PastNumbers } from './PastNumbers'
 import { TrackRecord } from './TrackRecord'
+import type { SecondOpinion } from './useSecondOpinion'
 
 interface Props {
   latest: ForecastResponse
   past: Day[]
   pastHours: Hour[]
   layers: Layers
+  second: SecondOpinion
 }
 
-/** The main dashboard: the live scene first, then now, the next 48 hours, the next 7 days and the past 28. */
-export function Overview({ latest, past, pastHours, layers }: Props) {
+/** The main dashboard: the live scene, now, the next 48 hours, the next 7 days with the second opinion, the past 28. */
+export function Overview({ latest, past, pastHours, layers, second }: Props) {
   const c = latest.current
   const today = todayOf(c)
   const latestHours = toHours(latest.hourly)
@@ -43,7 +45,7 @@ export function Overview({ latest, past, pastHours, layers }: Props) {
         dailyUnits={latest.daily_units}
         layers={layers}
       />
-      <NowTiles current={c} units={latest.current_units} today={next[0]} rainChance48={maxRainChance(next48)} />
+      <NowTiles current={c} units={latest.current_units} today={next[0]} rainChance48={maxRainChance(next48)} verdict={second.verdict} />
       <div className="row">
         <Next48Hours hours={next48} units={latest.hourly_units} layers={layers} />
         <TrackRecord />

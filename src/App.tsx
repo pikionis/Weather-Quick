@@ -7,6 +7,7 @@ import { PageHeader } from './components/PageHeader'
 import { PastWeeks } from './components/PastWeeks'
 import { Sidebar } from './components/Sidebar'
 import { useForecast } from './components/useForecast'
+import { useSecondOpinion } from './components/useSecondOpinion'
 
 /** The dashboard lives in the URL (?dashboard=instrument), so a link opens the same one. */
 const readDashboard = (): Dashboard =>
@@ -23,6 +24,7 @@ function dashboardHref(d: Dashboard): string {
 function App() {
   const forecast = useForecast()
   const { latest } = forecast
+  const second = useSecondOpinion(latest)
   const [menu, setMenu] = useState(() => !isNarrow())
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
   const [dashboard, setDashboard] = useState<Dashboard>(readDashboard)
@@ -73,10 +75,10 @@ function App() {
         {!latest ? (
           <InstrumentEmpty error={forecast.error} onRetry={forecast.retry} />
         ) : dashboard === 'overview' ? (
-          <Overview latest={latest} past={forecast.past} pastHours={forecast.pastHours} layers={layers} />
+          <Overview latest={latest} past={forecast.past} pastHours={forecast.pastHours} layers={layers} second={second} />
         ) : (
           <>
-            <Instrument latest={latest} showDew={layers.dew} />
+            <Instrument latest={latest} showDew={layers.dew} second={second} />
             {forecast.past.length > 0 && <PastWeeks days={forecast.past} units={latest.daily_units} />}
           </>
         )}
